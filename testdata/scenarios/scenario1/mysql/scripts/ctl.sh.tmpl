@@ -1,0 +1,58 @@
+#!/bin/bash
+PID=$$
+SERVICE_ROOT=`dirname $(dirname $0)`
+NAME=`basename $SERVICE_ROOT`
+
+PID_FILE="$SERVICE_ROOT/tmp/$NAME.pid"
+STOP_FILE="$SERVICE_ROOT/tmp/$NAME.stop"
+ERROR_FILE="$SERVICE_ROOT/tmp/$NAME.doerror"
+
+# Allows fail to start
+if [[ -f $ERROR_FILE ]]; then
+    sleep 2
+    exit 1
+fi
+
+function kill_self {
+    kill -0 $PID
+    if [[ $? == 0 ]]; then
+        kill $PID
+    fi
+}
+function do_error {
+   echo "[$NAME] Unexpected error" >&2
+   exit 1
+}
+
+function do_stop {
+   echo "[$NAME] Terminating"
+    rm -f $STOP_FILE
+   exit 0
+}
+
+trap do_error SIGUSR1 
+trap do_stop SIGUSR2
+
+mkdir -p `dirname $PID_FILE`
+
+if [[ "$1" == "start" ]]; then
+    if [[ -f $PID_FILE ]]; then
+        kill -0 `cat $PID_FILE` 2> /dev/null
+        if [[ $? == 0 ]]; then
+            # Already running
+            exit 0
+        fi
+    fi
+
+    echo $PID > $PID_FILE
+    
+    rm -f $STOP_FILE
+    # The script will automatically abort. This should be enough time for our dummy tests
+    (sleep 30; kill_self)&
+    while [[ ! -f $STOP_FILE ]]; do
+        sleep 0.1
+    done
+    do_stop
+else
+    touch $STOP_FILE
+fi

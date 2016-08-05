@@ -1,0 +1,5 @@
+check process apache
+  with pidfile "{{.RootDir}}/apache2/tmp/apache2.pid"
+  start program = "{{.RootDir}}/apache2/scripts/ctl.sh start" with timeout 10 seconds
+  stop program = "{{.RootDir}}/apache2/scripts/ctl.sh stop" with timeout 10 seconds
+  

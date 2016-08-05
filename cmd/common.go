@@ -1,0 +1,284 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/bitnami/gonit/monitor"
+	"github.com/bitnami/gonit/utils"
+
+	"github.com/spf13/cobra"
+)
+
+// Parsing vars
+var (
+	ControlFile       string
+	Verbose           bool
+	DaemonizeInterval int
+	PidFile           string
+	StateFile         string
+	LogFile           string
+	Foreground        bool
+	SocketFile        string
+)
+
+func addGlobalFlags() {
+	RootCmd.PersistentFlags().IntVarP(&DaemonizeInterval, "daemonize", "d", 0, "Run as a daemon once per `n` seconds")
+	RootCmd.PersistentFlags().BoolVarP(&Foreground, "foreground", "I", false, "Do not run in background (needed for run from init)")
+	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose mode, work noisy (diagnostic output)")
+	RootCmd.PersistentFlags().StringVarP(&StateFile, "statefile", "s", "/var/lib/gonit/state", "Set the `file` gonit should write state information to")
+	RootCmd.PersistentFlags().StringVarP(&ControlFile, "controlfile", "c", "/etc/gonit/gonitrc", "Use this control `file`")
+	RootCmd.PersistentFlags().StringVarP(&PidFile, "pidfile", "p", "/var/run/gonit.pid", "Use this `pidfile` in daemon mode")
+	// For now, disable the default value of /var/run/gonit.sock and force to
+	// explicitly enable
+	RootCmd.PersistentFlags().StringVarP(&SocketFile, "socketfile", "S", "/var/run/gonit.sock", "Use this `socketfile` to listen for requests in daemon mode")
+	RootCmd.PersistentFlags().StringVarP(&LogFile, "logfile", "l", "/var/log/gonit.log", "Print log information to this `file`.")
+}
+
+func ReloadDaemon() error {
+	return syscall.Kill(DaemonPid(), syscall.SIGHUP)
+}
+
+func QuitDaemon() {
+	pid := DaemonPid()
+	if err := syscall.Kill(DaemonPid(), syscall.SIGTERM); err != nil {
+		if !utils.WaitUntil(func() bool {
+			return utils.IsProcessRunning(pid)
+		}, 5*time.Second) {
+			syscall.Kill(pid, syscall.SIGKILL)
+		}
+	}
+}
+
+func DaemonPidFile() string {
+	return GetConfig().PidFile
+}
+func DaemonPid() int {
+	pid, _ := utils.ReadPid(DaemonPidFile())
+	return pid
+}
+func IsDaemonRunning() bool {
+	return utils.IsProcessRunning(DaemonPid())
+}
+
+func WaitForever() {
+	select {}
+}
+
+func InitApp(c monitor.Config) *monitor.Monitor {
+	app, err := monitor.New(c)
+	if err != nil {
+		utils.Exit(1, "Error initializing application: %s\n", err.Error())
+	}
+	return app
+}
+
+func absFile(p string, root string) string {
+	if p == "" {
+		return p
+	}
+	return utils.AbsFileFromRoot(p, root)
+}
+
+func UnimplementedCommand(name string) *cobra.Command {
+	return &cobra.Command{
+		Use: name,
+		Run: func(cmd *cobra.Command, args []string) {
+			utils.Exit(1, "%s not implemented!", name)
+		},
+	}
+}
+
+func GetConfig() monitor.Config {
+	cwd, _ := os.Getwd()
+	if os.Getenv("GO_DAEMON_CWD") != "" {
+		cwd = os.Getenv("GO_DAEMON_CWD")
+	}
+
+	// We have to find a better way of checking if a flag was provided so we can
+	// use 120 as DaemonizeInterval and simply use it
+	interval := 0
+	if DaemonizeInterval != 0 {
+		interval = DaemonizeInterval
+	} else {
+		interval = 120
+	}
+
+	cfg := monitor.Config{
+		ControlFile:   ControlFile,
+		Verbose:       Verbose,
+		PidFile:       absFile(PidFile, cwd),
+		StateFile:     absFile(StateFile, cwd),
+		SocketFile:    absFile(SocketFile, cwd),
+		CheckInterval: time.Duration(interval) * time.Second,
+	}
+
+	if LogFile == "" || LogFile == "-" {
+		cfg.LogFile = LogFile
+	} else {
+		cfg.LogFile = absFile(LogFile, cwd)
+	}
+
+	// Some basic sanitization of file permissions. This are enforced later on
+	// when opening them, but makes sense to report errors as soon as possible
+	for _, f := range []string{cfg.ControlFile, cfg.StateFile} {
+		utils.EnsureSafePermissions(f)
+	}
+	if cfg.ControlFile != "" && !utils.FileExists(cfg.ControlFile) {
+		utils.Exit(1, "Control file '%s' does not exists", cfg.ControlFile)
+	}
+
+	if Foreground {
+		cfg.ShouldDaemonize = false
+	} else {
+		cfg.ShouldDaemonize = true
+	}
+	return cfg
+}
+
+func GetChecksManager() interface {
+	monitor.ChecksManager
+} {
+	var manager interface {
+		monitor.ChecksManager
+	}
+	if IsDaemonRunning() {
+		// TODO, this is just to get the config..., we should mot need the App
+		app := InitApp(GetConfig())
+		if app.HTTPServerSupported() {
+			manager = monitor.NewClient(app.SocketFile)
+		}
+	}
+	if manager == nil {
+		manager = InitApp(GetConfig())
+	}
+	return manager
+}
+func flattenErrors(errors []error) error {
+	if len(errors) == 0 {
+		return nil
+	}
+	msgs := []string{}
+	for _, err := range errors {
+		msgs = append(msgs, err.Error())
+	}
+	return fmt.Errorf(strings.Join(msgs, "\n"))
+}
+
+type serviceCommand struct {
+	status        string
+	cmd           string
+	singleCheckCb func(string) error
+	multicheckCb  func() []error
+}
+
+func (sc *serviceCommand) Execute(arg string) (string, error) {
+	statuses := map[string]string{
+		"start":     "Started",
+		"stop":      "Stopped",
+		"restart":   "Restarted",
+		"monitor":   "Monitored",
+		"unmonitor": "Unmonitored",
+	}
+	status := statuses[sc.cmd]
+
+	var msg string
+	var err error
+	if arg == "" || arg == "all" {
+		err = flattenErrors(sc.multicheckCb())
+	} else {
+		err = sc.singleCheckCb(arg)
+		if err != nil {
+			err = fmt.Errorf("Failed to %s %s: %s", sc.cmd, arg, err.Error())
+		} else {
+			msg = fmt.Sprintf("%s %s", status, arg)
+		}
+	}
+
+	if err != nil {
+		return "", err
+	} else {
+		return msg, nil
+	}
+}
+
+func RunCheckCommandAndExit(cmd string, args []string) {
+	cm := GetChecksManager()
+	msg, err, code := RunCheckCommand(cm, cmd, args)
+	if code != 0 {
+		msg = err.Error()
+	}
+	utils.Exit(code, msg)
+}
+func RunCheckCommand(cm interface {
+	monitor.ChecksManager
+}, cmd string, args []string) (msg string, err error, code int) {
+	var arg string
+	if len(args) == 0 {
+		arg = ""
+	} else {
+		arg = args[0]
+	}
+
+	var sc *serviceCommand
+
+	switch cmd {
+	case "start":
+		sc = &serviceCommand{
+			cmd:           cmd,
+			singleCheckCb: cm.Start,
+			multicheckCb:  cm.StartAll,
+		}
+	case "stop":
+		sc = &serviceCommand{
+			cmd:           cmd,
+			singleCheckCb: cm.Stop,
+			multicheckCb:  cm.StopAll,
+		}
+	case "restart":
+		sc = &serviceCommand{
+			cmd:           cmd,
+			singleCheckCb: cm.Restart,
+			multicheckCb:  cm.RestartAll,
+		}
+	case "monitor":
+		sc = &serviceCommand{
+			cmd:           cmd,
+			singleCheckCb: cm.Monitor,
+			multicheckCb:  cm.MonitorAll,
+		}
+
+	case "unmonitor":
+		sc = &serviceCommand{
+			cmd:           cmd,
+			singleCheckCb: cm.Unmonitor,
+			multicheckCb:  cm.UnmonitorAll,
+		}
+	default:
+		return "", fmt.Errorf("Unkown command %s", cmd), -1
+	}
+	msg, err = sc.Execute(arg)
+	if err != nil && code == 0 {
+		code = 1
+	}
+	return msg, err, code
+}
+
+func NewValidatedCommand(name string, baseCmd cobra.Command, minArgs int, maxArgs int, cb func(*cobra.Command, []string)) *cobra.Command {
+	baseCmd.Run = func(cmd *cobra.Command, args []string) {
+		if minArgs == maxArgs && len(args) != minArgs {
+			utils.Exit(2, "Command %s requires exactly %d arguments but %d were provided", name, maxArgs, len(args))
+		} else {
+			if len(args) > maxArgs {
+				utils.Exit(2, "Command %s requires at most %d arguments but %d were provided", name, maxArgs, len(args))
+			} else if len(args) < minArgs {
+				utils.Exit(2, "Command %s requires at least %d arguments but %d were provided", name, minArgs, len(args))
+			}
+		}
+		cb(cmd, args)
+	}
+	return &baseCmd
+}

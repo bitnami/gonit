@@ -1,0 +1,5 @@
+check process mysql
+  with pidfile "{{.RootDir}}/mysql/tmp/mysql.pid"
+  start program = "{{.RootDir}}/mysql/scripts/ctl.sh start" with timeout 10 seconds
+  stop program = "{{.RootDir}}/mysql/scripts/ctl.sh stop" with timeout 10 seconds
+  
