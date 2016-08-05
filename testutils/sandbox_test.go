@@ -25,7 +25,7 @@ func TestNewSandbox(t *testing.T) {
 	defer sb2.Cleanup()
 
 	assert.Regexp(t,
-		regexp.MustCompile(fmt.Sprintf("^%s/sandbox.*$", os.TempDir())),
+		regexp.MustCompile(fmt.Sprintf(`^%s/+sandbox.*$`, filepath.Clean(os.TempDir()))),
 		sb2.Root)
 
 	for _, s := range []*Sandbox{sb1, sb2} {
@@ -195,7 +195,9 @@ func TestTouch(t *testing.T) {
 	s1, _ := os.Stat(fullPath)
 	mt1 := s1.ModTime()
 
-	time.Sleep(500 * time.Millisecond)
+	// To avoid issues on OS X, we have to wait more then 1sec (HFS+ only stores timestamps to a granularity of one second)
+	// http://stackoverflow.com/questions/18403588/how-to-return-millisecond-information-for-file-access-on-mac-os-x-in-java/18404059#18404059
+	time.Sleep(1500 * time.Millisecond)
 	sb.Touch(tail)
 	s2, _ := os.Stat(fullPath)
 	mt2 := s2.ModTime()

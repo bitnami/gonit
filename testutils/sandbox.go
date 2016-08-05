@@ -66,6 +66,11 @@ func (sb *Sandbox) TempFile(args ...string) string {
 		tail = args[0]
 	} else {
 		tail = strconv.Itoa(rand.Int())
+		// Too long paths in osx result in errors creating sockets (make the daemon tests break)
+		// https://github.com/golang/go/issues/6895
+		if len(tail) > 10 {
+			tail = tail[0:10]
+		}
 	}
 	mutex.Lock()
 	tail += strconv.Itoa(tempFileIndex)

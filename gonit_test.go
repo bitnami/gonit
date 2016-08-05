@@ -164,7 +164,7 @@ func (suite *ConfigSuite) TestValidations() {
 	))
 	id := "sample"
 
-	script := filepath.Join(suite.defaultValues["bitnami-root"], fmt.Sprintf("loop-%s.sh", id))
+	script := filepath.Join(suite.sb.Root, fmt.Sprintf("loop-%s.sh", id))
 
 	cfg := gt.CfgOpts{
 		Name:         id,

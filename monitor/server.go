@@ -55,6 +55,9 @@ func (ms *monitorServer) Start() error {
 }
 
 func (ms *monitorServer) Stop() error {
+	if ms.listener == nil {
+		return fmt.Errorf("Refused to close a nil listener")
+	}
 	return (*ms.listener).Close()
 }
 
