@@ -4,6 +4,12 @@ _gonit_ is a GPL drop in replacement form [monit](https://mmonit.com/monit/).
 
 Currently, it only supports a subset of its configuration settings and only process type checks.
 
+## Installation
+
+```
+$> go get github.com/bitnami/gonit/...
+```
+
 ## Building from source
 
 ```
