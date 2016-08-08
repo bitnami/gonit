@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -30,13 +31,21 @@ var (
 )
 
 type trackedLogger struct {
+	sync.RWMutex
 	log.Logger
 	debug      []string
 	debugTrack *regexp.Regexp
 }
 
+func (tl *trackedLogger) GetEntries() []string {
+	defer tl.RUnlock()
+	tl.RLock()
+	return tl.debug
+}
 func (tl *trackedLogger) MDebugf(format string, args ...interface{}) {
 	if tl.debugTrack != nil && tl.debugTrack.MatchString(format) {
+		defer tl.Unlock()
+		tl.Lock()
 		tl.debug = append(tl.debug, format)
 	}
 }
@@ -52,89 +61,6 @@ func TestMain(m *testing.M) {
 
 	sb.Cleanup()
 	os.Exit(c)
-}
-
-type dummyService struct {
-	ProcessCheck
-	doError      bool
-	startTime    time.Duration
-	stopTime     time.Duration
-	running      bool
-	timesStarted int
-}
-
-func newDummyService(id string) *dummyService {
-	s := dummyService{ProcessCheck: ProcessCheck{check: check{ID: id}}}
-	s.startTime = 5 * time.Millisecond
-	s.stopTime = 5 * time.Millisecond
-	s.running = false
-	s.doError = false
-	return &s
-}
-func (ds *dummyService) IsRunning() bool {
-	return ds.running
-}
-func (ds *dummyService) IsNotRunning() bool {
-	return !ds.running
-}
-func (ds *dummyService) Status() (str string) {
-	if ds.IsRunning() {
-		str = "running"
-	} else {
-		str = "stopped"
-	}
-	return str
-}
-
-func (ds *dummyService) Start() error {
-	if ds.IsRunning() {
-		return nil
-	}
-	if ds.doError {
-		return fmt.Errorf("Error starting service %s", ds.GetID())
-	}
-	time.Sleep(ds.startTime)
-	ds.running = true
-	ds.timesStarted++
-	return nil
-}
-func (ds *dummyService) Stop() error {
-	if ds.IsNotRunning() {
-		return nil
-	}
-	if ds.doError {
-		return fmt.Errorf("Error stopping service %s", ds.GetID())
-	}
-	time.Sleep(ds.stopTime)
-	ds.running = false
-	return nil
-}
-
-func (ds *dummyService) Restart() error {
-	if err := ds.Stop(); err != nil {
-		return err
-	}
-	if err := ds.Start(); err != nil {
-		return err
-	}
-	return nil
-}
-
-type dummyCheck struct {
-	ProcessCheck
-	timesCalled int
-	waitTime    time.Duration
-}
-
-func (dc *dummyCheck) Perform() {
-	time.Sleep(dc.waitTime)
-	dc.timesCalled++
-}
-
-func newDummyCheck(id string) *dummyCheck {
-	c := &dummyCheck{}
-	c.ID = id
-	return c
 }
 func TestNew(t *testing.T) {
 	app, err := New(Config{})
@@ -319,8 +245,8 @@ func TestLoopForever(t *testing.T) {
 	app.AddCheck(dc1)
 	app.AddCheck(dc2)
 
-	assert.Equal(t, dc1.timesCalled, 0)
-	assert.Equal(t, dc2.timesCalled, 0)
+	assert.Equal(t, dc1.getTimesCalled(), 0)
+	assert.Equal(t, dc2.getTimesCalled(), 0)
 
 	assert.NoError(t, app.Unmonitor("dummy2"))
 
@@ -333,8 +259,8 @@ func TestLoopForever(t *testing.T) {
 	// Give it some time to abort the loop
 	time.Sleep(100 * time.Millisecond)
 
-	tc1 := dc1.timesCalled
-	tc2 := dc2.timesCalled
+	tc1 := dc1.getTimesCalled()
+	tc2 := dc2.getTimesCalled()
 
 	// At least it should have been called 5 times
 	assert.True(t, tc1 > 5, "Expected to be called at least 5 times but got %d", tc1)
@@ -342,8 +268,8 @@ func TestLoopForever(t *testing.T) {
 	// it is stopped so it should not change
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, tc1, dc1.timesCalled)
-	assert.Equal(t, tc2, dc2.timesCalled)
+	assert.Equal(t, tc1, dc1.getTimesCalled())
+	assert.Equal(t, tc2, dc2.getTimesCalled())
 }
 
 // TODO: This is slow, move it to the main monit tests once ready
@@ -487,33 +413,33 @@ func testServiceCommands(t *testing.T, app *Monitor, cm interface {
 		tu.AssertErrorMatch(t, fn(nonProcessCheck.GetID()), regexp.MustCompile("Check.*is not a process"))
 	}
 
-	assert.False(t, ch1.running)
-	assert.False(t, ch2.running)
+	assert.False(t, ch1.IsRunning())
+	assert.False(t, ch2.IsRunning())
 
 	assert.NoError(t, cm.Start(ch1.GetID()))
-	assert.True(t, ch1.running)
+	assert.True(t, ch1.IsRunning())
 	assert.NoError(t, cm.Stop(ch1.GetID()))
-	assert.False(t, ch1.running)
-	ts1 = ch1.timesStarted
+	assert.False(t, ch1.IsRunning())
+	ts1 = ch1.getTimesStarted()
 	assert.NoError(t, cm.Restart(ch1.GetID()))
-	assert.True(t, ch1.running)
-	assert.Equal(t, ch1.timesStarted, ts1+1)
+	assert.True(t, ch1.IsRunning())
+	assert.Equal(t, ch1.getTimesStarted(), ts1+1)
 
 	assert.Len(t, cm.StartAll(), 0, "It should return an empty set of errors")
-	assert.True(t, ch1.running)
-	assert.True(t, ch2.running)
+	assert.True(t, ch1.IsRunning())
+	assert.True(t, ch2.IsRunning())
 
-	ts1 = ch1.timesStarted
-	ts2 = ch2.timesStarted
+	ts1 = ch1.getTimesStarted()
+	ts2 = ch2.getTimesStarted()
 	assert.Len(t, cm.RestartAll(), 0, "It should return an empty set of errors")
-	assert.True(t, ch1.running)
-	assert.True(t, ch2.running)
-	assert.Equal(t, ch1.timesStarted, ts1+1)
-	assert.Equal(t, ch2.timesStarted, ts2+1)
+	assert.True(t, ch1.IsRunning())
+	assert.True(t, ch2.IsRunning())
+	assert.Equal(t, ch1.getTimesStarted(), ts1+1)
+	assert.Equal(t, ch2.getTimesStarted(), ts2+1)
 
 	assert.Len(t, cm.StopAll(), 0, "It should return an empty set of errors")
-	assert.False(t, ch1.running)
-	assert.False(t, ch2.running)
+	assert.False(t, ch1.IsRunning())
+	assert.False(t, ch2.IsRunning())
 
 	assert.True(t, ch1.IsMonitored())
 	assert.True(t, ch2.IsMonitored())
@@ -540,7 +466,12 @@ func testServiceCommands(t *testing.T, app *Monitor, cm interface {
 
 func TestMonitorClient(t *testing.T) {
 	t.Parallel()
-	app, err := New(Config{CheckInterval: time.Millisecond, SocketFile: sb.TempFile()})
+	dbFile := sb.TempFile()
+	app, err := New(Config{
+		CheckInterval: time.Millisecond,
+		SocketFile:    sb.TempFile(),
+		StateFile:     dbFile,
+	})
 	require.NoError(t, err)
 	assert.NoError(t, app.StartServer())
 	defer app.Terminate()
@@ -571,42 +502,42 @@ func TestMonitorClient(t *testing.T) {
 		tu.AssertErrorMatch(t, fn(nonProcessCheck.GetID()), regexp.MustCompile("Check.*is not a process"))
 	}
 
-	assert.False(t, ch1.running)
-	assert.False(t, ch2.running)
+	assert.False(t, ch1.IsRunning())
+	assert.False(t, ch2.IsRunning())
 
 	assert.NoError(t, cm.Start(ch1.GetID()))
-	time.Sleep(100 * time.Millisecond)
-	assert.True(t, ch1.running)
+	time.Sleep(300 * time.Millisecond)
+	assert.True(t, ch1.IsRunning())
 
 	assert.NoError(t, cm.Stop(ch1.GetID()))
-	time.Sleep(100 * time.Millisecond)
-	assert.False(t, ch1.running)
+	time.Sleep(300 * time.Millisecond)
+	assert.False(t, ch1.IsRunning())
 
-	ts1 = ch1.timesStarted
+	ts1 = ch1.getTimesStarted()
 
 	assert.NoError(t, cm.Restart(ch1.GetID()))
-	time.Sleep(100 * time.Millisecond)
-	assert.True(t, ch1.running)
-	time.Sleep(100 * time.Millisecond)
-	assert.Equal(t, ts1+1, ch1.timesStarted)
+	time.Sleep(300 * time.Millisecond)
+	assert.True(t, ch1.IsRunning())
+	time.Sleep(300 * time.Millisecond)
+	assert.Equal(t, ts1+1, ch1.getTimesStarted())
 	assert.Len(t, cm.StartAll(), 0, "It should return an empty set of errors")
-	time.Sleep(100 * time.Millisecond)
-	assert.True(t, ch1.running)
-	assert.True(t, ch2.running)
+	time.Sleep(300 * time.Millisecond)
+	assert.True(t, ch1.IsRunning())
+	assert.True(t, ch2.IsRunning())
 
-	ts1 = ch1.timesStarted
-	ts2 = ch2.timesStarted
+	ts1 = ch1.getTimesStarted()
+	ts2 = ch2.getTimesStarted()
 	assert.Len(t, cm.RestartAll(), 0, "It should return an empty set of errors")
-	time.Sleep(100 * time.Millisecond)
-	assert.True(t, ch1.running)
-	assert.True(t, ch2.running)
-	assert.Equal(t, ch1.timesStarted, ts1+1)
-	assert.Equal(t, ch2.timesStarted, ts2+1)
+	time.Sleep(300 * time.Millisecond)
+	assert.True(t, ch1.IsRunning())
+	assert.True(t, ch2.IsRunning())
+	assert.Equal(t, ch1.getTimesStarted(), ts1+1)
+	assert.Equal(t, ch2.getTimesStarted(), ts2+1)
 
 	assert.Len(t, cm.StopAll(), 0, "It should return an empty set of errors")
-	time.Sleep(100 * time.Millisecond)
-	assert.False(t, ch1.running)
-	assert.False(t, ch2.running)
+	time.Sleep(300 * time.Millisecond)
+	assert.False(t, ch1.IsRunning())
+	assert.False(t, ch2.IsRunning())
 
 	assert.True(t, ch1.IsMonitored())
 	assert.True(t, ch2.IsMonitored())
@@ -633,7 +564,7 @@ func TestMonitorClient(t *testing.T) {
 	//	testServiceCommands(t, app, cm)
 
 	assert.Regexp(t,
-		regexp.MustCompile("^\\s*Uptime 0\\s*\n\n(Process\\s+[^\\s]+\\s+.*\n)+"),
+		regexp.MustCompile(`^\s*Uptime \d+s?\s*\n\n(Process\s+[^\s]+\s+.*\n)+`),
 		cm.SummaryText())
 
 	assert.Regexp(t,
@@ -659,10 +590,12 @@ func TestLoopForeverLogStatsInDebugMode(t *testing.T) {
 	stopCh := make(chan bool)
 	go app.LoopForever(stopCh)
 	time.Sleep(100 * time.Millisecond)
-	assert.Len(t, l.debug, 0)
+	assert.Len(t, l.GetEntries(), 0)
 	os.Setenv("BITNAMI_DEBUG", "1")
 	time.Sleep(100 * time.Millisecond)
-	assert.True(t, len(l.debug) > 0, "It should have logged some RUNTIME debug but got %d messages", len(l.debug))
+	n := len(l.GetEntries())
+
+	assert.True(t, n > 0, "It should have logged some RUNTIME debug but got %d messages", n)
 	stopCh <- true
 }
 
@@ -824,11 +757,11 @@ func TestChecksPerformsOnlyOneTimeSimultaneously(t *testing.T) {
 	}
 	time.Sleep(300 * time.Millisecond)
 
-	tc := dc.timesCalled
+	tc := dc.getTimesCalled()
 	assert.Equal(t, 1, tc,
 		"Expected the number of times called to be 1 but got %d", tc)
 
-	dc.timesCalled = 0
+	dc.setTimesCalled(0)
 	dc.waitTime = 1 * time.Millisecond
 	for i := 0; i < maxCalls; i++ {
 		app.Perform()
@@ -837,7 +770,7 @@ func TestChecksPerformsOnlyOneTimeSimultaneously(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	tc = dc.timesCalled
+	tc = dc.getTimesCalled()
 	assert.Equal(t, tc, maxCalls,
 		"Expected the number of times called to be %d but got %d", maxCalls, tc)
 }

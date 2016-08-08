@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,25 +25,30 @@ func TestMain(m *testing.M) {
 }
 
 func TestWaitUntilReturn(t *testing.T) {
+	m := &sync.RWMutex{}
 	done := false
 	precision := 10 * time.Millisecond
-	triggerTime := 100 * time.Millisecond
+	triggerTime := 500 * time.Millisecond
 	//	maxAcceptableTime := 100*time.Millisecond + 2*precision
 
 	var start, end time.Time
 	go func() {
 		start = time.Now()
 		time.Sleep(triggerTime)
+		defer m.Unlock()
+		m.Lock()
 		done = true
 	}()
 
 	ellapsed := tu.Measure(func() {
 		WaitUntil(func() bool {
+			defer m.RUnlock()
+			m.RLock()
 			return done
 		}, 2*time.Second, precision)
 	})
 	end = time.Now()
-	assert.WithinDuration(t, end, start.Add(triggerTime), 2*precision, "Measured time %v is out of the acceptable ranges", ellapsed)
+	assert.WithinDuration(t, end, start.Add(triggerTime), 3*precision, "Measured time %v is out of the acceptable ranges", ellapsed)
 }
 
 func TestWaitUntilTimedOut(t *testing.T) {
@@ -61,6 +67,7 @@ func TestWaitUntilTimedOut(t *testing.T) {
 }
 
 func TestWaitUntilDefaultPrecision(t *testing.T) {
+	m := &sync.RWMutex{}
 	done := false
 	triggerTime := 100 * time.Millisecond
 
@@ -68,11 +75,15 @@ func TestWaitUntilDefaultPrecision(t *testing.T) {
 	go func() {
 		start = time.Now()
 		time.Sleep(triggerTime)
+		defer m.Unlock()
+		m.Lock()
 		done = true
 	}()
 
 	ellapsed := tu.Measure(func() {
 		WaitUntil(func() bool {
+			defer m.RUnlock()
+			m.RLock()
 			return done
 		}, 2*time.Second)
 	})

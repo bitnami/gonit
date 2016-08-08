@@ -19,24 +19,65 @@ import (
 // before automatically unmonitoring a check
 const CheckMaxStartTries = 5
 
-type checkState struct {
+type syncValue struct {
 	sync.RWMutex
-	inProgress bool
+	value interface{}
+}
+
+func (sv *syncValue) get() interface{} {
+	return sv.value
+}
+func (sv *syncValue) Get() interface{} {
+	defer sv.RUnlock()
+	sv.RLock()
+	return sv.get()
+}
+func (sv *syncValue) set(v interface{}) {
+	sv.value = v
+}
+func (sv *syncValue) Set(v interface{}) {
+	defer sv.Unlock()
+	sv.Lock()
+	sv.set(v)
+}
+
+type syncBool struct {
+	syncValue
+}
+
+func (b *syncBool) Get() bool {
+	return b.syncValue.Get().(bool)
+}
+
+type syncTime struct {
+	syncValue
+}
+
+func (t *syncTime) Get() time.Time {
+	defer t.RUnlock()
+	t.RLock()
+	v := t.syncValue.get()
+	if v == nil {
+		return time.Time{}
+	}
+	return v.(time.Time)
+}
+
+type checkState struct {
+	syncBool
 }
 
 func (cs *checkState) SetInProgressState(state bool) {
-	cs.Lock()
-	defer cs.Unlock()
-	cs.inProgress = state
+	cs.Set(state)
 }
 
 func (cs *checkState) Take() (success bool) {
 	cs.Lock()
 	defer cs.Unlock()
-	if cs.inProgress {
+	if cs.get().(bool) {
 		return false
 	}
-	cs.inProgress = true
+	cs.set(true)
 	return true
 }
 
@@ -71,7 +112,8 @@ func doOnce(id string, cb func(), timeout time.Duration, opts Opts) (blocked boo
 	mutex.Lock()
 	s, ok := checkStates[id]
 	if !ok || s == nil {
-		s = &checkState{inProgress: false}
+		s = &checkState{}
+		s.value = false
 		checkStates[id] = s
 	}
 	mutex.Unlock()
@@ -146,7 +188,7 @@ type check struct {
 	Timeout time.Duration
 	// Monitored configures wether the check is taken into account by the monitor or not.
 	// If not, it won't be automatically started in case of unhandled stops
-	Monitored bool
+	monitored syncBool
 	logger    Logger
 	lastCheck time.Time
 }
@@ -171,7 +213,7 @@ func (c *check) Initialize(opts Opts) {
 	if opts.Logger != nil {
 		c.logger = opts.Logger
 	}
-	c.Monitored = true
+	c.SetMonitored(true)
 }
 
 func (c *check) getMonitoredString() (str string) {
@@ -204,11 +246,11 @@ func (c *check) Parse(data string) {
 }
 
 func (c *check) IsMonitored() bool {
-	return c.Monitored
+	return c.monitored.Get()
 }
 
 func (c *check) SetMonitored(monitored bool) {
-	c.Monitored = monitored
+	c.monitored.Set(monitored)
 }
 
 func newCheck(id string, kind string) interface {
@@ -312,7 +354,6 @@ func (c *ProcessCheck) String() string {
 // for example, the logger
 func (c *ProcessCheck) Initialize(opts Opts) {
 	c.check.Initialize(opts)
-
 	// Ensure the programs are not nil
 	if c.StartProgram == nil {
 		c.StartProgram = newCommand("", c.Timeout, opts)
@@ -333,7 +374,7 @@ func (c *ProcessCheck) Initialize(opts Opts) {
 		c.StopProgram.Timeout = c.Timeout
 	}
 	if c.IsRunning() {
-		c.startedAt = time.Now()
+		c.startedAt.Set(time.Now())
 	}
 }
 
@@ -364,7 +405,7 @@ func (c *ProcessCheck) Perform() {
 		for {
 			if c.IsRunning() {
 				c.StartTrialsCnt = 0
-				c.startedAt = time.Now()
+				c.startedAt.Set(time.Now())
 				c.logger.Debugf("%s successfully started", c.ID)
 				break
 			}
@@ -382,7 +423,7 @@ func (c *ProcessCheck) Perform() {
 		}
 
 		if c.StartTrialsCnt >= maxTries {
-			c.Monitored = false
+			c.SetMonitored(false)
 			c.StartTrialsCnt = 0
 			c.logger.Warnf("%s was unmonitored after %d failed tries", c.ID, CheckMaxStartTries)
 		}
@@ -404,7 +445,7 @@ func (c *ProcessCheck) Restart() (err error) {
 
 func (c *ProcessCheck) start() {
 	c.logger.Debugf("Starting %s", c.GetID())
-	c.Monitored = true
+	c.SetMonitored(true)
 	if c.IsRunning() {
 		c.logger.Debugf("%s is already running", c.GetID())
 		return
@@ -412,7 +453,9 @@ func (c *ProcessCheck) start() {
 	// Even if it fails, we reset the time
 	// TODO: Find a better name for the variable if it doesn't
 	// exactly mean "startedAt" but more "resetTime"
-	defer func() { c.startedAt = time.Now() }()
+	defer func() {
+		c.startedAt.Set(time.Now())
+	}()
 	c.StartProgram.Exec()
 }
 
@@ -428,7 +471,7 @@ func (c *ProcessCheck) Start() error {
 
 func (c *ProcessCheck) stop() {
 	c.logger.Debugf("Stopping %s", c.GetID())
-	c.Monitored = false
+	c.SetMonitored(false)
 	if !c.IsRunning() {
 		c.logger.Debugf("%s is already stopped", c.GetID())
 		return
@@ -482,7 +525,7 @@ type ProcessCheck struct {
 	StartProgram   *Command
 	StartTrialsCnt int
 	StopProgram    *Command
-	startedAt      time.Time
+	startedAt      syncTime
 	maxStartTries  int
 }
 
@@ -491,11 +534,10 @@ func (c *ProcessCheck) Uptime() time.Duration {
 	if !c.IsMonitored() || !c.IsRunning() {
 		return time.Duration(0)
 	}
-	// Not yet initialized
-	if c.startedAt.Equal(time.Time{}) {
+	if c.startedAt.Get().Equal(time.Time{}) {
 		return time.Duration(0)
 	}
-	return time.Now().Sub(c.startedAt)
+	return time.Now().Sub(c.startedAt.Get())
 }
 
 func unquote(str string) string {

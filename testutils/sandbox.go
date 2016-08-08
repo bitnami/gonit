@@ -19,6 +19,7 @@ var (
 // Sandbox allows manipulating files and directories with paths sandboxed into
 // the Root directory
 type Sandbox struct {
+	sync.RWMutex
 	// Root of the sandbox
 	Root               string
 	temporaryResources []string
@@ -44,6 +45,8 @@ func NewSandbox(args ...string) *Sandbox {
 
 // Track registers a path as a temporary one to be deleted on cleanup
 func (sb *Sandbox) Track(p string) {
+	defer sb.Unlock()
+	sb.Lock()
 	sb.temporaryResources = append(sb.temporaryResources, sb.Normalize(p))
 }
 
@@ -119,7 +122,10 @@ func (sb *Sandbox) WriteFile(path string, data []byte, mode os.FileMode) (string
 
 // Cleanup removes all the resources created by the sandbox
 func (sb *Sandbox) Cleanup() error {
-	for _, p := range sb.temporaryResources {
+	sb.RLock()
+	resources := sb.temporaryResources
+	sb.RUnlock()
+	for _, p := range resources {
 		os.RemoveAll(p)
 	}
 	return os.RemoveAll(sb.Root)

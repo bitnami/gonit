@@ -1,5 +1,12 @@
 package utils
 
+import (
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
 func TestAbsFileWithWrongCWD(t *testing.T) {
 	cwd, _ := os.Getwd()
 	defer os.Chdir(cwd)

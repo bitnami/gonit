@@ -70,14 +70,14 @@ type Monitor struct {
 	LogFile string
 	// StartTime is the moment in which the monitor was started
 	StartTime time.Time
-	// LastCheck contains the time in which the last monitor check was performed
-	LastCheck time.Time
 	// ControlFile points to the configuration file used to load the checks to perform
 	ControlFile string
 	// CheckInterval configures the interval between checks
 	CheckInterval time.Duration
 	// SocketFile contains the path to he listening Unix domain socket when the HTTP server is enabled
 	SocketFile string
+
+	lastCheck syncTime
 
 	// Checks contains the list of registered system checks
 	checks []interface {
@@ -150,6 +150,11 @@ func New(c Config) (*Monitor, error) {
 	return mon, nil
 }
 
+// LastCheck return the time in which the last monitor check was performed
+func (m *Monitor) LastCheck() time.Time {
+	return m.lastCheck.Get()
+}
+
 // Uptime returns for how long the monitor have been running
 func (m *Monitor) Uptime() time.Duration {
 	// Not yet initialized
@@ -167,6 +172,8 @@ func (m *Monitor) UpdateDatabase() error {
 		if e == nil {
 			e = m.database.AddEntry(c.GetID())
 		}
+		defer e.unlock()
+		e.lock()
 		e.Monitored = c.IsMonitored()
 		whileList[c.GetID()] = struct{}{}
 	}
@@ -211,8 +218,12 @@ func (m *Monitor) AddCheck(c interface {
 	e := m.database.GetEntry(c.GetID())
 	if e == nil {
 		e = m.database.AddEntry(c.GetID())
+		defer e.unlock()
+		e.lock()
 		e.Monitored = c.IsMonitored()
 	} else {
+		defer e.rUnlock()
+		e.rLock()
 		c.SetMonitored(e.Monitored)
 	}
 	m.checks = append(m.checks, c)
@@ -282,7 +293,7 @@ func (m *Monitor) LoopForever(finish chan bool) {
 func (m *Monitor) Perform() {
 	m.logger.Infof("Performing checks")
 
-	m.LastCheck = time.Now()
+	m.lastCheck.Set(time.Now())
 	for _, c := range m.checks {
 		if c.IsMonitored() {
 			// The slow part of CheckOnce is already in a goroutine
@@ -453,6 +464,7 @@ func (m *Monitor) SummaryText() string {
 // and Monitor attributes
 func (m *Monitor) StatusText() string {
 	s := ""
+	lc := m.LastCheck()
 	s += fmt.Sprintf(`
 %-30s %v
 %-30s %s
@@ -464,8 +476,8 @@ func (m *Monitor) StatusText() string {
 %-30s %s
 `,
 		"Uptime", utils.RoundDuration(m.Uptime()),
-		"Last Check", m.LastCheck,
-		"Next Check", m.LastCheck.Add(m.CheckInterval),
+		"Last Check", lc,
+		"Next Check", lc.Add(m.CheckInterval),
 		"Pid", m.Pid,
 		"Pid File", m.PidFile,
 		"Control File", m.ControlFile,

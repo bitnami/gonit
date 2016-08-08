@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/gob"
+	"sync"
 	"time"
 
 	"github.com/bitnami/gonit/database"
@@ -9,10 +10,25 @@ import (
 
 // ChecksDatabaseEntry defines a check entry in the monitor database
 type ChecksDatabaseEntry struct {
+	mutex           sync.RWMutex
 	ID              string
 	Monitored       bool
 	DataCollectedAt time.Time
 	Uptime          time.Duration
+}
+
+func (e *ChecksDatabaseEntry) rLock() {
+	e.mutex.RLock()
+}
+func (e *ChecksDatabaseEntry) rUnlock() {
+	e.mutex.RUnlock()
+}
+
+func (e *ChecksDatabaseEntry) lock() {
+	e.mutex.Lock()
+}
+func (e *ChecksDatabaseEntry) unlock() {
+	e.mutex.Unlock()
 }
 
 func init() {

@@ -21,7 +21,7 @@ all: get-build-deps
 	@$(MAKE) -s validate-command-gocovmerge validate-command-golint
 	@$(MAKE) -s parallelizable-steps
 
-parallelizable-steps: vet lint build test cover
+parallelizable-steps: vet lint build test race-test cover
 
 build:
 	@echo "+ $@"
@@ -65,6 +65,11 @@ test: $(addprefix test-, $(PACKAGES))
 	@echo "+ Testing gonit tool"
 	@go test .
 
+race-test: $(addprefix race-test-, $(PACKAGES))
+	# This is pretty slow, and makes the time-sensitive tests fail
+	# @echo "+ Testing gonit tool (race conditions)"
+	# @go test -race .
+
 cover: test $(addprefix cover-, $(PACKAGES))
 	@$(MAKE) -s validate-command-gocovmerge
 	@gocovmerge $(wildcard $(BUILD_DIR)/*.coverprofile) > $(BUILD_DIR)/cover.out
@@ -79,5 +84,10 @@ cover-%: $(BUILD_DIR)/%.coverprofile
 test-%:
 	@echo "+ Testing $(*F)"
 	@mkdir -p $(BUILD_DIR)
-	$(GO_TEST)  -coverprofile=$(BUILD_DIR)/$(*F).coverprofile ./$(*F)
+	$(GO_TEST) -covermode=count -coverprofile=$(BUILD_DIR)/$(*F).coverprofile ./$(*F)
+
+race-test-%:
+	@echo "+ Testing $(*F) (race conditions)"
+	@mkdir -p $(BUILD_DIR)
+	$(GO_TEST) -race ./$(*F)
 
