@@ -73,7 +73,7 @@ func (ms *monitorServer) formatResponse(fn func() (bool, string)) string {
 	return string(res)
 }
 
-func (ms *monitorServer) defineDelayedServiceCmdRoutes(router *httprouter.Router, id string, cb func(string) error, shouldSkip func(interface {
+func (ms *monitorServer) defineServiceCmdRoutes(router *httprouter.Router, id string, cb func(string) error, shouldSkip func(interface {
 	Checkable
 }) bool) {
 
@@ -135,7 +135,7 @@ func createServer(monitor *Monitor) *monitorServer {
 		func(cb func(interface {
 			CheckableProcess
 		}) error) {
-			s.defineDelayedServiceCmdRoutes(router, cmd, func(id string) error {
+			s.defineServiceCmdRoutes(router, cmd, func(id string) error {
 				c, err := monitor.findProcessCheck(id)
 				if err != nil {
 					return err
@@ -156,6 +156,7 @@ func createServer(monitor *Monitor) *monitorServer {
 		}(cb)
 	}
 
+	// monitor and unmonitor are synchronous
 	for cmd, cb := range map[string]func(interface {
 		Checkable
 	}) error{
@@ -165,20 +166,12 @@ func createServer(monitor *Monitor) *monitorServer {
 		func(cb func(interface {
 			Checkable
 		}) error) {
-
-			s.defineDelayedServiceCmdRoutes(router, cmd, func(id string) error {
+			s.defineServiceCmdRoutes(router, cmd, func(id string) error {
 				c := monitor.FindCheck(id)
 				if c == nil {
 					return fmt.Errorf("Cannot find check with id %s", id)
 				}
-				uid := c.GetUniqueID()
-
-				timeout := c.GetTimeout() + (5 * time.Second)
-				blocked := doOnce(uid, func() { cb(c) }, timeout, Opts{Logger: s.logger})
-				if blocked {
-					return fmt.Errorf("[%s] Other action already in progress -- please try again later", id)
-				}
-				return nil
+				return cb(c)
 			}, func(e interface {
 				Checkable
 			}) bool {
