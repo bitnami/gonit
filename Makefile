@@ -4,13 +4,15 @@ PACKAGES := utils database testutils monitor
 LINT_PACKAGES = $(PACKAGES) gonittest
 VET_PACKAGES = $(PACKAGES) gonittest
 
+fmtcheck = @goimports -l $(1) | read; if [ $$? == 0 ]; then echo "goimports check failed for $(1):\n `goimports -d $(1)`"; exit 1; fi
+
 ifeq ($(VERBOSE), 1)
 	GO_TEST_ARGS := -v
 else
 	GO_TEST_ARGS := 
 endif
 
-GO_TEST := @go test -covermode=count $(GO_TEST_ARGS)
+GO_TEST := @go test $(GO_TEST_ARGS)
 GO_COVER := @go tool cover
 BUILD_DIR := ./.build
 DIST_DIR := ./dist/gonit
@@ -34,6 +36,11 @@ clean:
 	-rm -rf $(BUILD_DIR)
 	-rm -rf $(DIST_DIR)
 
+get-deps:
+	@echo "+ Downloading dependencies"
+	@go get ./...
+	@$(MAKE) get-build-deps
+
 get-build-deps:
 	@echo "+ Downloading build dependencies"
 	@go get golang.org/x/tools/cmd/goimports
@@ -56,10 +63,13 @@ lint: $(addprefix lint-, $(LINT_PACKAGES))
 	@echo "+ $@"
 	@$(MAKE) -s validate-command-golint
 	@golint .
+	$(call fmtcheck, .)
 
 lint-%:
 	@echo "+ $@"
 	@golint ./$(*F)
+	$(call fmtcheck, $(*F))
+
 
 test: $(addprefix test-, $(PACKAGES))
 	@echo "+ Testing gonit tool"
