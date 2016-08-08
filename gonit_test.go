@@ -885,6 +885,8 @@ func (suite *CmdSuite) TestSummaryCommand() {
 
 	gonit(flags, "summary").AssertSuccessMatch(t, statusStr)
 
+	// This is not a cleanup operation, we are synchronously requesting
+	// the daemon to be stopped
 	daemon.TearDown()
 	daemon.RequireStopped(t)
 
