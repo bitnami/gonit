@@ -255,13 +255,21 @@ PID=$$
 PID_FILE="{{.PidFile}}"
 STOP_FILE="{{.RootDir}}/{{.Name}}.stop"
 ERROR_FILE="{{.RootDir}}/{{.Name}}.doerror"
+
+function kill_self {
+    kill -0 $PID
+    if [[ $? == 0 ]]; then
+        kill $PID
+    fi
+}
+
 if [[ -f $ERROR_FILE ]]; then
     exit 1
 fi
 echo $PID > $PID_FILE
 
 rm $STOP_FILE
-
+(sleep 30; kill_self)&
 while [[ ! -f $STOP_FILE ]]; do
   sleep 0.1
 done
