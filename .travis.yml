@@ -1,0 +1,16 @@
+language: go
+go:
+  - 1.6
+
+os:
+  - linux
+  - osx
+
+install: make get-deps
+
+script:
+  - make vet
+  - make lint
+  - make cover
+  - make race-test
+  - make build
