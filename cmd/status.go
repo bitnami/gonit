@@ -13,11 +13,11 @@ var statusCmd = &cobra.Command{
 	Short: "Print full status information for each service",
 	Long:  "Print full status information for each service",
 	Run: func(cmd *cobra.Command, args []string) {
-		if !IsDaemonRunning() {
-			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", DaemonPidFile())
+		if !isDaemonRunning() {
+			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", daemonPidFile())
 			os.Exit(1)
 
-		} else if cm := GetChecksManager(); cm != nil {
+		} else if cm := getChecksManager(); cm != nil {
 			str := cm.StatusText()
 			if str != "" {
 				fmt.Println(str)

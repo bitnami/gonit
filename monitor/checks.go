@@ -496,12 +496,12 @@ func (c *ProcessCheck) Pid() int {
 	return pid
 }
 
-// IsRunning returns true if the proccess is running
+// IsRunning returns true if the process is running
 func (c *ProcessCheck) IsRunning() bool {
 	return utils.IsProcessRunning(c.Pid())
 }
 
-// IsNotRunning returns true if the proccess is not running
+// IsNotRunning returns true if the process is not running
 func (c *ProcessCheck) IsNotRunning() bool {
 	return !c.IsRunning()
 }
