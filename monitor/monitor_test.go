@@ -296,8 +296,8 @@ func TestLoopForeverStopsCheckingMultipleErrors(t *testing.T) {
 	assert.True(t, ch1.IsRunning())
 	assert.True(t, ch2.IsRunning())
 
-	assert.Equal(t, ch1.StartTrialsCnt, 0)
-	assert.Equal(t, ch2.StartTrialsCnt, 0)
+	assert.Equal(t, ch1.startTriesCnt.Get(), 0)
+	assert.Equal(t, ch2.startTriesCnt.Get(), 0)
 
 	doErrorFile := filepath.Join(rootDir, fmt.Sprintf("%s.doerror", id1))
 	sb.Touch(doErrorFile)
