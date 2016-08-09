@@ -13,13 +13,15 @@ import (
 	"github.com/bitnami/gonit/utils"
 )
 
+// Logger defines a logger object
 type Logger struct {
 	logrus.Logger
 }
 
+// DebugLevel defines the dubug verbosity of the logger
 const DebugLevel = logrus.DebugLevel
 
-func (l *Logger) MLogf(level int, format string, args ...interface{}) {
+func (l *Logger) mLogf(level int, format string, args ...interface{}) {
 	var printer func(args ...interface{})
 	switch logrus.Level(level) {
 	case DebugLevel:
@@ -32,18 +34,24 @@ func (l *Logger) MLogf(level int, format string, args ...interface{}) {
 		printer(line)
 	}
 }
+
+// MDebugf prints a multiline debug message.
+// Multiple lines are splitted into multiple log entries
 func (l *Logger) MDebugf(format string, args ...interface{}) {
-	l.MLogf(int(DebugLevel), format, args...)
+	l.mLogf(int(DebugLevel), format, args...)
 }
 
+// New returns a new logger
 func New() *logrus.Logger {
 	return logrus.New()
 }
 
+// DummyLogger provides a dummy logger object
 func DummyLogger() *Logger {
 	return StreamLogger(ioutil.Discard)
 }
 
+// StreamLogger returns a logger backed by a provided io.Writter
 func StreamLogger(w interface {
 	io.Writer
 }) *Logger {
@@ -53,7 +61,11 @@ func StreamLogger(w interface {
 		Level: logrus.InfoLevel,
 	}}
 }
+
+// FileLogger returns a logger backed by file
 func FileLogger(file string) *Logger {
+	var l *Logger
+
 	parentDir := filepath.Dir(file)
 	if !utils.FileExists(parentDir) {
 		if err := os.MkdirAll(parentDir, os.FileMode(0755)); err != nil {
@@ -62,13 +74,12 @@ func FileLogger(file string) *Logger {
 		}
 	}
 	fh, err := os.OpenFile(file, syscall.O_APPEND|syscall.O_RDWR|syscall.O_CREAT, 0644)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening log file: %s\n", err.Error())
-		return DummyLogger()
+		l = DummyLogger()
 	} else {
-		return StreamLogger(fh)
+		l = StreamLogger(fh)
 	}
-}
-func init() {
-
+	return l
 }

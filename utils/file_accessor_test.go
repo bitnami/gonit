@@ -109,8 +109,5 @@ func TestOpenFileSecureNonExisting(t *testing.T) {
 
 func init() {
 	// Mockup the exit with panic
-	DoNotExit = true
-	//	abort = func(msg string, args ...interface{}) {
-	//		panic(fmt.Sprintf(msg, args...))
-	//	}
+	doNotExit = true
 }

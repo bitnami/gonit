@@ -12,10 +12,10 @@ var reloadCmd = &cobra.Command{
 	Short: "Reinitialize tool",
 	Long:  "Reinitialize tool",
 	Run: func(cmd *cobra.Command, args []string) {
-		if IsDaemonRunning() {
-			ReloadDaemon()
+		if isDaemonRunning() {
+			reloadDaemon()
 		} else {
-			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", DaemonPidFile())
+			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", daemonPidFile())
 			os.Exit(1)
 		}
 	},

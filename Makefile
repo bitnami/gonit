@@ -1,8 +1,8 @@
 .PHONY: test cover build all clean parallelizable-steps
 
 PACKAGES := utils database testutils monitor
-LINT_PACKAGES = $(PACKAGES) gonittest
-VET_PACKAGES = $(PACKAGES) gonittest
+LINT_PACKAGES = $(PACKAGES) gonittest log cmd
+VET_PACKAGES = $(PACKAGES) gonittest log cmd
 
 fmtcheck = @if goimports -l $(1) | read var; then echo "goimports check failed for $(1):\n `goimports -d $(1)`"; exit 1; fi
 

@@ -1,6 +1,6 @@
 package cmd
 
-var validateCmd = UnimplementedCommand("validate")
+var validateCmd = unimplementedCommand("validate")
 
 func init() {
 	RootCmd.AddCommand(validateCmd)
