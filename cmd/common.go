@@ -13,16 +13,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Parsing vars
 var (
-	ControlFile       string
-	Verbose           bool
+	// ControlFile configures the main gonit configuration file
+	ControlFile string
+	// Verbose increases the log verbosity when set to true
+	Verbose bool
+	// DaemonizeInterval configures the number of seconds between checks when
+	// running in loop mode
 	DaemonizeInterval int
-	PidFile           string
-	StateFile         string
-	LogFile           string
-	Foreground        bool
-	SocketFile        string
+	// PidFile configures the path to the gonit Pid file
+	PidFile string
+	// StateFile configures the path to the gonit state database
+	StateFile string
+	// LogFile configures the path to the gonit log file
+	LogFile string
+	// Foreground makes the process run the foreground instead of trying to daemonize it
+	Foreground bool
+	// SocketFile configures the path to the Unix Socket when enabling the HTTP interface
+	SocketFile string
 )
 
 func addGlobalFlags() {
@@ -38,13 +46,13 @@ func addGlobalFlags() {
 	RootCmd.PersistentFlags().StringVarP(&LogFile, "logfile", "l", "/var/log/gonit.log", "Print log information to this `file`.")
 }
 
-func ReloadDaemon() error {
-	return syscall.Kill(DaemonPid(), syscall.SIGHUP)
+func reloadDaemon() error {
+	return syscall.Kill(daemonPid(), syscall.SIGHUP)
 }
 
-func QuitDaemon() {
-	pid := DaemonPid()
-	if err := syscall.Kill(DaemonPid(), syscall.SIGTERM); err != nil {
+func quitDaemon() {
+	pid := daemonPid()
+	if err := syscall.Kill(daemonPid(), syscall.SIGTERM); err != nil {
 		if !utils.WaitUntil(func() bool {
 			return utils.IsProcessRunning(pid)
 		}, 5*time.Second) {
@@ -53,22 +61,18 @@ func QuitDaemon() {
 	}
 }
 
-func DaemonPidFile() string {
-	return GetConfig().PidFile
+func daemonPidFile() string {
+	return getConfig().PidFile
 }
-func DaemonPid() int {
-	pid, _ := utils.ReadPid(DaemonPidFile())
+func daemonPid() int {
+	pid, _ := utils.ReadPid(daemonPidFile())
 	return pid
 }
-func IsDaemonRunning() bool {
-	return utils.IsProcessRunning(DaemonPid())
+func isDaemonRunning() bool {
+	return utils.IsProcessRunning(daemonPid())
 }
 
-func WaitForever() {
-	select {}
-}
-
-func InitApp(c monitor.Config) *monitor.Monitor {
+func initApp(c monitor.Config) *monitor.Monitor {
 	app, err := monitor.New(c)
 	if err != nil {
 		utils.Exit(1, "Error initializing application: %s\n", err.Error())
@@ -83,7 +87,7 @@ func absFile(p string, root string) string {
 	return utils.AbsFileFromRoot(p, root)
 }
 
-func UnimplementedCommand(name string) *cobra.Command {
+func unimplementedCommand(name string) *cobra.Command {
 	return &cobra.Command{
 		Use: name,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -92,7 +96,7 @@ func UnimplementedCommand(name string) *cobra.Command {
 	}
 }
 
-func GetConfig() monitor.Config {
+func getConfig() monitor.Config {
 	cwd, _ := os.Getwd()
 	if os.Getenv("GO_DAEMON_CWD") != "" {
 		cwd = os.Getenv("GO_DAEMON_CWD")
@@ -139,21 +143,21 @@ func GetConfig() monitor.Config {
 	return cfg
 }
 
-func GetChecksManager() interface {
+func getChecksManager() interface {
 	monitor.ChecksManager
 } {
 	var manager interface {
 		monitor.ChecksManager
 	}
-	if IsDaemonRunning() {
+	if isDaemonRunning() {
 		// TODO, this is just to get the config..., we should mot need the App
-		app := InitApp(GetConfig())
+		app := initApp(getConfig())
 		if app.HTTPServerSupported() {
 			manager = monitor.NewClient(app.SocketFile)
 		}
 	}
 	if manager == nil {
-		manager = InitApp(GetConfig())
+		manager = initApp(getConfig())
 	}
 	return manager
 }
@@ -200,22 +204,21 @@ func (sc *serviceCommand) Execute(arg string) (string, error) {
 
 	if err != nil {
 		return "", err
-	} else {
-		return msg, nil
 	}
+	return msg, nil
 }
 
-func RunCheckCommandAndExit(cmd string, args []string) {
-	cm := GetChecksManager()
-	msg, err, code := RunCheckCommand(cm, cmd, args)
+func runCheckCommandAndExit(cmd string, args []string) {
+	cm := getChecksManager()
+	msg, code, err := runCheckCommand(cm, cmd, args)
 	if code != 0 {
 		msg = err.Error()
 	}
 	utils.Exit(code, msg)
 }
-func RunCheckCommand(cm interface {
+func runCheckCommand(cm interface {
 	monitor.ChecksManager
-}, cmd string, args []string) (msg string, err error, code int) {
+}, cmd string, args []string) (msg string, code int, err error) {
 	var arg string
 	if len(args) == 0 {
 		arg = ""
@@ -258,16 +261,16 @@ func RunCheckCommand(cm interface {
 			multicheckCb:  cm.UnmonitorAll,
 		}
 	default:
-		return "", fmt.Errorf("Unkown command %s", cmd), -1
+		return "", -1, fmt.Errorf("Unknown command %s", cmd)
 	}
 	msg, err = sc.Execute(arg)
 	if err != nil && code == 0 {
 		code = 1
 	}
-	return msg, err, code
+	return msg, code, err
 }
 
-func NewValidatedCommand(name string, baseCmd cobra.Command, minArgs int, maxArgs int, cb func(*cobra.Command, []string)) *cobra.Command {
+func newValidatedCommand(name string, baseCmd cobra.Command, minArgs int, maxArgs int, cb func(*cobra.Command, []string)) *cobra.Command {
 	baseCmd.Run = func(cmd *cobra.Command, args []string) {
 		if minArgs == maxArgs && len(args) != minArgs {
 			utils.Exit(2, "Command %s requires exactly %d arguments but %d were provided", name, maxArgs, len(args))

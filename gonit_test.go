@@ -15,7 +15,6 @@ import (
 
 	"github.com/bitnami/gonit/utils"
 
-	"github.com/bitnami/gonit/cmd"
 	gt "github.com/bitnami/gonit/gonittest"
 	"github.com/bitnami/gonit/monitor"
 	tu "github.com/bitnami/gonit/testutils"
@@ -65,22 +64,9 @@ func prepareRootDir(rootDir string) (pidFile, logFile, socketFile, ctrlFile, sta
 	socketFile = filepath.Join(rootDir, "/var/run/gonit.sock")
 	ctrlFile = filepath.Join(rootDir, "conf/gonit/bitnami.conf")
 	stateFile = filepath.Join(rootDir, "/var/lib/gonit/state")
+
+	os.MkdirAll(filepath.Dir(ctrlFile), os.FileMode(0755))
 	return pidFile, logFile, socketFile, ctrlFile, stateFile
-}
-
-func sandboxConfiguration(sandbox *tu.Sandbox) map[string]string {
-	defaultValues := make(map[string]string)
-
-	defaultValues["LogFile"] = cmd.LogFile
-	cmd.LogFile = sandbox.Normalize(cmd.LogFile)
-
-	defaultValues["ControlFile"] = cmd.ControlFile
-	cmd.ControlFile = sandbox.Normalize(cmd.ControlFile)
-
-	defaultValues["SocketFile"] = cmd.SocketFile
-	cmd.SocketFile = sandbox.Normalize(cmd.SocketFile)
-
-	return defaultValues
 }
 
 type GonitDaemon struct {
@@ -131,15 +117,7 @@ func (suite *ConfigSuite) AssertPanicsMatch(fn func(), re *regexp.Regexp) bool {
 }
 
 func (suite *ConfigSuite) SetupSuite() {
-	utils.DoNotExit = true
 	suite.sb = tu.NewSandbox()
-
-	suite.defaultValues = sandboxConfiguration(suite.sb)
-	for _, p := range []string{bitnamiRoot, bitnamiConf, bitnamiTmp} {
-		dir, err := suite.sb.Mkdir(p, os.FileMode(0755))
-		os.Chmod(dir, os.FileMode(0755))
-		suite.NoError(err)
-	}
 }
 
 func (suite *ConfigSuite) TearDownSuite() {
@@ -147,21 +125,14 @@ func (suite *ConfigSuite) TearDownSuite() {
 }
 
 func (suite *ConfigSuite) TestValidations() {
-	var cm monitor.ChecksManager
+	t := suite.T()
 
-	for k, expectedDefault := range map[string]string{
-		"ControlFile": "/etc/gonit/gonitrc",
-		"LogFile":     "/var/log/gonit.log",
-		"SocketFile":  "/var/run/gonit.sock",
-	} {
-		suite.Equal(suite.defaultValues[k], expectedDefault)
-	}
+	pidFile, logFile, socketFile, ctrlFile, stateFile := prepareRootDir(suite.sb.Root)
 
-	suite.AssertPanicsMatch(func() {
-		cm = cmd.GetChecksManager()
-	}, regexp.MustCompile(
-		fmt.Sprintf("code\\(1\\): Control file '%s' does not exists", filepath.Join(suite.sb.Root, suite.defaultValues["ControlFile"])),
-	))
+	daemon := NewGonitDaemon(pidFile, logFile, socketFile, ctrlFile, stateFile)
+
+	daemon.Start().AssertErrorMatch(t, fmt.Sprintf("Control file '%s' does not exists", ctrlFile))
+
 	id := "sample"
 
 	script := filepath.Join(suite.sb.Root, fmt.Sprintf("loop-%s.sh", id))
@@ -179,29 +150,21 @@ func (suite *ConfigSuite) TestValidations() {
 
 	suite.NoError(gt.RenderTemplate("sample-ctl-script", script, cfg))
 	os.Chmod(script, os.FileMode(0755))
-	suite.sb.Mkdir("/etc/gonit", os.FileMode(0755))
-	suite.sb.Mkdir("/var/log", os.FileMode(0755))
-	suite.sb.Mkdir("/var/run", os.FileMode(0755))
 
-	suite.NoError(gt.RenderTemplate("service-check", cmd.ControlFile, cfg))
+	suite.NoError(gt.RenderTemplate("service-check", ctrlFile, cfg))
 
 	// Make sure it has wrong permissions
-	os.Chmod(cmd.ControlFile, os.FileMode(0755))
-	suite.AssertPanicsMatch(func() {
-		cm = cmd.GetChecksManager()
-	}, regexp.MustCompile(
-		fmt.Sprintf("code\\(1\\): file '%s' must have permissions no more than -rwx------; right now permissions are -rwxr-xr-x", cmd.ControlFile),
-	))
+	os.Chmod(ctrlFile, os.FileMode(0755))
 
-	os.Chmod(cmd.ControlFile, os.FileMode(0700))
-	suite.NotPanics(func() {
-		cm = cmd.GetChecksManager()
-	})
-	check := cm.(*monitor.Monitor).FindCheck(id)
-	suite.Require().NotNil(check)
+	daemon.Start().AssertErrorMatch(t,
+		fmt.Sprintf(
+			"file '%s' must have permissions no more than -rwx------; right now permissions are -rwxr-xr-x",
+			ctrlFile))
 
-	suite.Equal(check.GetID(), id)
-	suite.False(check.(monitor.CheckableProcess).IsRunning())
+	os.Chmod(ctrlFile, os.FileMode(0700))
+
+	daemon.Start().AssertSuccess(t)
+	defer daemon.TearDown()
 }
 
 func TestConfigSuite(t *testing.T) {
@@ -228,7 +191,6 @@ func (suite *CmdSuite) AssertPanicsMatch(fn func(), re *regexp.Regexp) bool {
 }
 
 func (suite *CmdSuite) SetupSuite() {
-	utils.DoNotExit = true
 	suite.sb = tu.NewSandbox()
 }
 
@@ -413,7 +375,7 @@ func (suite *CmdSuite) TestRestartCommand() {
 	time.Sleep(1500 * time.Millisecond)
 	daemon.RequireRunning(t)
 
-	// The first time, all configured services are started wiht the daemon
+	// The first time, all configured services are started with the daemon
 	require.True(IsProcessRunning(apachePidFile))
 	require.True(IsProcessRunning(mysqlPidFile))
 	apachePid, _ := utils.ReadPid(apachePidFile)
@@ -642,7 +604,7 @@ func (suite *CmdSuite) TestStartCommand() {
 	time.Sleep(1500 * time.Millisecond)
 	daemon.RequireRunning(t)
 
-	// The first time, all configured services are started wiht the daemon
+	// The first time, all configured services are started with the daemon
 	require.True(IsProcessRunning(apachePidFile))
 	require.True(IsProcessRunning(mysqlPidFile))
 
@@ -771,7 +733,7 @@ func (suite *CmdSuite) TestStopCommand() {
 	time.Sleep(1500 * time.Millisecond)
 	daemon.RequireRunning(t)
 
-	// The first time, all configured services are started wiht the daemon
+	// The first time, all configured services are started with the daemon
 	require.True(IsProcessRunning(apachePidFile))
 	require.True(IsProcessRunning(mysqlPidFile))
 
@@ -921,7 +883,9 @@ func (r CmdResult) AssertSuccessMatch(t *testing.T, re interface{}) bool {
 	}
 	return true
 }
-
+func (r CmdResult) AssertCode(t *testing.T, code int) bool {
+	return assert.Equal(t, code, r.code, "Expected %d code but got %d", code, r.code)
+}
 func (r CmdResult) AssertSuccess(t *testing.T) bool {
 	return assert.True(t, r.Success(), "Expected command to success but got code=%d stderr=%s", r.code, r.stderr)
 }

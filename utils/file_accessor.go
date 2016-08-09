@@ -10,8 +10,8 @@ import (
 
 // this helps with tesing
 
-// DoNotExit configures whether to exit on fatal errors or just panic
-var DoNotExit = false
+// doNotExit configures whether to exit on fatal errors or just panic
+var doNotExit = false
 
 type exitValue struct {
 	Code   int
@@ -41,7 +41,7 @@ func (ev exitValue) Exit() {
 func Exit(code int, reason string, reasonArgs ...interface{}) {
 	msg := fmt.Sprintf(reason, reasonArgs...)
 	ev := exitValue{Code: code, Reason: msg}
-	if DoNotExit {
+	if doNotExit {
 		ev.Panic()
 	} else {
 		ev.Exit()
@@ -96,7 +96,7 @@ type FileAccessor interface {
 }
 
 //SecureFileAccessor allows defining the acceptable permission used when
-// reading and writting files
+// reading and writing files
 type SecureFileAccessor struct {
 	MaxPermissions          os.FileMode
 	DefaultWritePermissions os.FileMode
@@ -133,7 +133,7 @@ func (fa *SecureFileAccessor) ReadFile(file string) (string, error) {
 	return string(bytes), err
 }
 
-// WriteFile allows writting a file and enforcing its permissions to the configured ones
+// WriteFile allows writing a file and enforcing its permissions to the configured ones
 func (fa *SecureFileAccessor) WriteFile(file, data string) error {
 	err := ioutil.WriteFile(file, []byte(data), fa.DefaultWritePermissions)
 	if err != nil {

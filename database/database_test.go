@@ -152,7 +152,7 @@ func TestFileDatabaseDeserializeFromMalformedFile(t *testing.T) {
 	dbFile, err := sb.WriteFile("dbFile", []byte("asdf"), os.FileMode(0777))
 	require.NoError(t, err)
 
-	db, err := NewFileDatabase(dbFile)
+	db, _ := NewFileDatabase(dbFile)
 
 	tu.AssertErrorMatch(t, db.Deserialize(),
 		regexp.MustCompile("Error reading possible malformed database file"))
