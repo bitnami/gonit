@@ -4,7 +4,7 @@ PACKAGES := utils database testutils monitor
 LINT_PACKAGES = $(PACKAGES) gonittest
 VET_PACKAGES = $(PACKAGES) gonittest
 
-fmtcheck = @goimports -l $(1) | read; if [ $$? == 0 ]; then echo "goimports check failed for $(1):\n `goimports -d $(1)`"; exit 1; fi
+fmtcheck = @if goimports -l $(1) | read var; then echo "goimports check failed for $(1):\n `goimports -d $(1)`"; exit 1; fi
 
 ifeq ($(VERBOSE), 1)
 	GO_TEST_ARGS := -v
@@ -76,9 +76,6 @@ test: $(addprefix test-, $(PACKAGES))
 	@go test .
 
 race-test: $(addprefix race-test-, $(PACKAGES))
-	# This is pretty slow, and makes the time-sensitive tests fail
-	# @echo "+ Testing gonit tool (race conditions)"
-	# @go test -race .
 
 cover: test $(addprefix cover-, $(PACKAGES))
 	@$(MAKE) -s validate-command-gocovmerge
