@@ -1,3 +1,5 @@
+[![Build Status](https://api.travis-ci.org/bitnami/gonit.svg?branch=master)](http://travis-ci.org/bitnami/gonit)
+
 # gonit
 
 _gonit_ is a GPL drop in replacement form [monit](https://mmonit.com/monit/).
