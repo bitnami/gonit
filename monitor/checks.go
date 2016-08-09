@@ -24,6 +24,17 @@ type syncValue struct {
 	value interface{}
 }
 
+func (sv *syncValue) toInt() int {
+	if sv.value == nil {
+		return 0
+	}
+	if n, ok := sv.value.(int); !ok {
+		panic(fmt.Errorf("Cannot convert %v to int", sv.value))
+	} else {
+		return n
+	}
+}
+
 func (sv *syncValue) get() interface{} {
 	return sv.value
 }
@@ -47,6 +58,25 @@ type syncBool struct {
 
 func (b *syncBool) Get() bool {
 	return b.syncValue.Get().(bool)
+}
+
+type syncInt struct {
+	syncValue
+}
+
+func (i *syncInt) Get() int {
+	defer i.RUnlock()
+	i.RLock()
+	return i.syncValue.toInt()
+}
+
+func (i *syncInt) Incr() int {
+	defer i.Unlock()
+	i.Lock()
+	n := i.syncValue.toInt()
+	n++
+	i.syncValue.set(n)
+	return n
 }
 
 type syncTime struct {
@@ -404,7 +434,7 @@ func (c *ProcessCheck) Perform() {
 	Loop:
 		for {
 			if c.IsRunning() {
-				c.StartTrialsCnt = 0
+				c.startTriesCnt.Set(0)
 				c.startedAt.Set(time.Now())
 				c.logger.Debugf("%s successfully started", c.ID)
 				break
@@ -416,15 +446,15 @@ func (c *ProcessCheck) Perform() {
 				iteratorTimer.Reset(iterationTime)
 			case <-timoutTimer.C:
 				//				iteratorTimer.Stop()
-				c.StartTrialsCnt++
-				c.logger.Warnf("Timed out waiting for %s to start (%d tries left)", c.ID, maxTries-c.StartTrialsCnt)
+				c.startTriesCnt.Incr()
+				c.logger.Warnf("Timed out waiting for %s to start (%d tries left)", c.ID, maxTries-c.startTriesCnt.Get())
 				break Loop
 			}
 		}
 
-		if c.StartTrialsCnt >= maxTries {
+		if c.startTriesCnt.Get() >= maxTries {
 			c.SetMonitored(false)
-			c.StartTrialsCnt = 0
+			c.startTriesCnt.Set(0)
 			c.logger.Warnf("%s was unmonitored after %d failed tries", c.ID, CheckMaxStartTries)
 		}
 	}
@@ -520,13 +550,13 @@ func (c *ProcessCheck) Status() (str string) {
 // ProcessCheck defines a service type check
 type ProcessCheck struct {
 	check
-	Group          string
-	PidFile        string
-	StartProgram   *Command
-	StartTrialsCnt int
-	StopProgram    *Command
-	startedAt      syncTime
-	maxStartTries  int
+	Group         string
+	PidFile       string
+	StartProgram  *Command
+	StopProgram   *Command
+	startedAt     syncTime
+	maxStartTries int
+	startTriesCnt syncInt
 }
 
 // Uptime returns for how long the process have been running
