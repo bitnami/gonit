@@ -73,6 +73,14 @@ func RunMonitor(c monitor.Config) {
 			reloadDaemon()
 			os.Exit(0)
 		} else if c.ShouldDaemonize {
+
+			utils.EnsureSafePermissions(c.ControlFile)
+			if !utils.FileExists(c.ControlFile) {
+				utils.Exit(1, "Configuration file '%s' does not exist", c.ControlFile)
+			}
+			if !utils.IsReadableFile(c.ControlFile) {
+				utils.Exit(1, "Configuration file '%s' is not readable", c.ControlFile)
+			}
 			if err := utils.ValidatePidFilePath(c.PidFile); err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
