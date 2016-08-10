@@ -161,6 +161,13 @@ func (suite *ConfigSuite) TestValidations() {
 			"file '%s' must have permissions no more than -rwx------; right now permissions are -rwxr-xr-x",
 			ctrlFile))
 
+	// Now too restrictive
+	os.Chmod(ctrlFile, os.FileMode(0000))
+	daemon.Start().AssertErrorMatch(t,
+		fmt.Sprintf(
+			"Configuration file '%s' is not readable",
+			ctrlFile))
+
 	os.Chmod(ctrlFile, os.FileMode(0700))
 
 	daemon.Start().AssertSuccess(t)
@@ -501,11 +508,13 @@ func (suite *CmdSuite) TestReloadCommand() {
 	suite.TrackPidFiles(apachePidFile, mysqlPidFile)
 
 	gonit(flags, "reload").AssertSuccess(t)
+	time.Sleep(500 * time.Millisecond)
 	gonit(flags, "summary").AssertSuccessMatch(t, "(?s).*Process apache.*Process mysql.*")
 	mysqlConf := filepath.Join(rootDir, "conf/gonit/conf.d/mysql.conf")
 	os.RemoveAll(mysqlConf)
 
 	gonit(flags, "reload").AssertSuccess(t)
+	time.Sleep(500 * time.Millisecond)
 	r := gonit(flags, "summary")
 	r.AssertSuccess(suite.T())
 	suite.Regexp("(?s).*Process apache.*", r.stdout)
@@ -517,6 +526,7 @@ func (suite *CmdSuite) TestReloadCommand() {
 		[]byte("check process sample_check"), os.FileMode(0644))
 
 	gonit(flags, "reload").AssertSuccess(t)
+	time.Sleep(500 * time.Millisecond)
 	r = gonit(flags, "summary")
 	r.AssertSuccess(suite.T())
 	suite.Regexp("(?s).*Process sample_check.*", r.stdout)

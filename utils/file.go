@@ -68,6 +68,19 @@ func IsWritableFile(path string) bool {
 	return IsFile(path) && IsWritable(path)
 }
 
+// IsReadable returns true if the path exists and is redable and false otherwise
+func IsReadable(path string) bool {
+	if !FileExists(path) {
+		return false
+	}
+	return syscall.Access(path, unix.R_OK) == nil
+}
+
+// IsReadableFile returns true if path is a file and redable and false otherwise
+func IsReadableFile(path string) bool {
+	return IsReadable(path) && IsFile(path)
+}
+
 // FileExists returns true if path exists or false otherwise
 func FileExists(path string) bool {
 	if _, err := os.Stat(AbsFile(path)); err == nil {
