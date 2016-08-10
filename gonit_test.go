@@ -46,6 +46,7 @@ func tearDown(pid int) bool {
 		syscall.Kill(pid, syscall.SIGTERM)
 		time.Sleep(100 * time.Millisecond)
 		syscall.Kill(pid, syscall.SIGKILL)
+		time.Sleep(100 * time.Millisecond)
 		return true
 	}
 	return false
