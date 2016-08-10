@@ -643,6 +643,9 @@ func (suite *CmdSuite) TestStartCommand() {
 	time.Sleep(1500 * time.Millisecond)
 	require.True(IsProcessRunning(mysqlPidFile))
 }
+func (suite *CmdSuite) TestVersionCommand() {
+	gonit([]string{}, "version").AssertSuccessMatch(suite.T(), fmt.Sprintf("^Gonit %s", version))
+}
 
 func (suite *CmdSuite) TestStopCommandNoDaemon() {
 	t := suite.T()
