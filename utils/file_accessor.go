@@ -69,15 +69,17 @@ func ensurePermissions(file string, maxPermissions os.FileMode) {
 	}
 	fm := fileInfo.Mode()
 
-	fileGID := int(fileInfo.Sys().(*syscall.Stat_t).Gid)
 	fileUID := int(fileInfo.Sys().(*syscall.Stat_t).Uid)
 
 	if fileUID != euid {
 		abort("file '%s' must be owned by you.", file)
 	}
-	if maxPermissions&0077 != 0 && fileGID != egid {
-		abort("file '%s' group must be yours", file)
-	}
+
+	// fileGID := int(fileInfo.Sys().(*syscall.Stat_t).Gid)
+	// This is not always the case
+	// if maxPermissions&0077 != 0 && fileGID != egid {
+	//	abort("file '%s' group must be yours", file)
+	// }
 
 	if mask&fm != 0 {
 		abort(

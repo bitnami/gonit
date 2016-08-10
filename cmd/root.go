@@ -77,7 +77,15 @@ func RunMonitor(c monitor.Config) {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
+
+			if c.StateFile != "" && !utils.IsWritableFile(c.StateFile) {
+				utils.Exit(1, "State file '%s' is not writable", c.StateFile)
+			}
+
 			if c.SocketFile != "" {
+				if !utils.IsWritableFile(c.SocketFile) {
+					utils.Exit(1, "Socket file '%s' is not writable", c.SocketFile)
+				}
 				// Early abort before trying to start the daemon
 				utils.EnsurePermissions(c.SocketFile, 0660)
 			}
