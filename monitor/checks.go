@@ -286,12 +286,12 @@ func (c *check) SetMonitored(monitored bool) {
 func newCheck(id string, kind string) interface {
 	Checkable
 } {
-	check := check{Timeout: 120 * time.Second, ID: id, logger: log.DummyLogger()}
+	check := &check{Timeout: 120 * time.Second, ID: id, logger: log.DummyLogger()}
 	switch kind {
 	case "process":
 		return &ProcessCheck{check: check}
 	default:
-		return &check
+		return check
 	}
 }
 
@@ -549,7 +549,7 @@ func (c *ProcessCheck) Status() (str string) {
 
 // ProcessCheck defines a service type check
 type ProcessCheck struct {
-	check
+	*check
 	Group         string
 	PidFile       string
 	StartProgram  *Command

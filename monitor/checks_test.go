@@ -32,7 +32,7 @@ func (ds *dummyService) setTimesStarted(t int) {
 }
 
 func newDummyService(id string) *dummyService {
-	s := dummyService{ProcessCheck: ProcessCheck{check: check{ID: id}}}
+	s := dummyService{ProcessCheck: ProcessCheck{check: &check{ID: id}}}
 	s.startTime = 5 * time.Millisecond
 	s.stopTime = 5 * time.Millisecond
 	s.doError = false
@@ -134,14 +134,12 @@ func (dc *dummyCheck) setTimesCalled(t int) {
 }
 
 func newDummyCheck(id string) *dummyCheck {
-	c := &dummyCheck{}
-	c.ID = id
-	return c
+	return &dummyCheck{ProcessCheck: ProcessCheck{check: &check{ID: id}}}
 }
 
 func TestCheckOnceOneSimultaneousInvocationPerObject(t *testing.T) {
 	t.Parallel()
-	dc := &dummyCheck{}
+	dc := newDummyCheck("dummy")
 	dc.Initialize(Opts{})
 
 	dc.setWaitTime(20 * time.Millisecond)
@@ -165,11 +163,11 @@ func TestCheckOnceOneSimultaneousInvocationPerObject(t *testing.T) {
 
 func TestCheckOnceTwoChecksWithSameId(t *testing.T) {
 	t.Parallel()
-	dc1 := &dummyCheck{}
+	dc1 := newDummyCheck("dummy")
 	dc1.Initialize(Opts{})
 	dc1.setWaitTime(20 * time.Millisecond)
 
-	dc2 := &dummyCheck{}
+	dc2 := newDummyCheck("dummy")
 	dc2.Initialize(Opts{})
 	dc2.setWaitTime(20 * time.Millisecond)
 
