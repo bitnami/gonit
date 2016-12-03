@@ -130,7 +130,7 @@ func TestUpdateDatabase(t *testing.T) {
 	db := app.database
 	assert.Len(t, db.Keys(), 0)
 	for _, id := range ids {
-		app.AddCheck(&ProcessCheck{check: check{ID: id}})
+		app.AddCheck(&ProcessCheck{check: &check{ID: id}})
 	}
 	db.Deserialize()
 	assert.Len(t, db.Keys(), 0)
@@ -143,7 +143,7 @@ func TestUpdateDatabase(t *testing.T) {
 
 	// Deregisters unknown checks
 	app.checks = nil
-	app.AddCheck(&ProcessCheck{check: check{ID: "foo"}})
+	app.AddCheck(&ProcessCheck{check: &check{ID: "foo"}})
 	app.UpdateDatabase()
 	db.Deserialize()
 	assert.Equal(t, db.Keys(), []string{"foo"})
@@ -157,7 +157,7 @@ func TestFindCheck(t *testing.T) {
 		Checkable
 	})
 	for _, id := range ids {
-		ch := &ProcessCheck{check: check{ID: id}}
+		ch := &ProcessCheck{check: &check{ID: id}}
 		checks[id] = ch
 		app.AddCheck(ch)
 	}
@@ -176,7 +176,7 @@ func TestAddCheck(t *testing.T) {
 	require.NoError(t, err)
 	logger := app.logger
 	for _, id := range ids {
-		ch := &ProcessCheck{check: check{ID: id}}
+		ch := &ProcessCheck{check: &check{ID: id}}
 		assert.NoError(t, app.AddCheck(ch))
 		// When adding the check, the app set it up to use its logger
 		// TODO: Maybe this should not be the case, so a check can be registered
@@ -185,7 +185,7 @@ func TestAddCheck(t *testing.T) {
 	}
 
 	for _, id := range ids {
-		ch := &ProcessCheck{check: check{ID: id}}
+		ch := &ProcessCheck{check: &check{ID: id}}
 		tu.AssertErrorMatch(t, app.AddCheck(ch), regexp.MustCompile("Service name conflict,.*already defined"))
 	}
 }
@@ -603,8 +603,7 @@ func TestSummaryText(t *testing.T) {
 	app, err := New(Config{})
 	require.NoError(t, err)
 	// With no checks
-	assert.Regexp(t, regexp.MustCompile("^\\s*Uptime 0\\s*$"), app.SummaryText())
-
+	assert.Regexp(t, regexp.MustCompile("^\\s*Uptime 0s?\\s*$"), app.SummaryText())
 	dc1 := newDummyCheck("dummy1")
 	// Make it to be running
 	f, _ := sb.Write(sb.TempFile(), fmt.Sprintf("%d", syscall.Getpid()))
@@ -616,7 +615,7 @@ func TestSummaryText(t *testing.T) {
 	app.AddCheck(dc2)
 
 	assert.Regexp(t, regexp.MustCompile(
-		"^\\s*Uptime 0\\s*\n\nProcess\\s+dummy1\\s+Running\nProcess\\s+dummy2\\s+Stopped\n$",
+		"^\\s*Uptime 0s?\\s*\n\nProcess\\s+dummy1\\s+Running\nProcess\\s+dummy2\\s+Stopped\n$",
 	), app.SummaryText())
 }
 
@@ -643,12 +642,12 @@ func TestStatusText(t *testing.T) {
 		statusTextHeaderPattern+`\s*Process\s+'dummy1'\s*
 \s*status\s+Running
 \s*pid\s*\d+
-\s*uptime\s*\d+
+\s*uptime\s*\d+s?
 \s*monitoring status\s*monitored
 
 Process\s+'dummy2'\s*
 \s*status\s+Stopped
-\s*uptime\s*0
+\s*uptime\s*0s?
 \s*monitoring status\s*monitored
 `,
 	), app.StatusText())
