@@ -821,13 +821,25 @@ func (suite *CmdSuite) TestStatusCommand() {
 	apachePidFile := filepath.Join(rootDir, "apache2/tmp/apache2.pid")
 	mysqlPidFile := filepath.Join(rootDir, "mysql/tmp/mysql.pid")
 	suite.TrackPidFiles(apachePidFile, mysqlPidFile)
+	statusHeaderPattern := fmt.Sprintf(`Uptime\s+\d+.*.+Pid\s+%d.+Pid File\s+%s.+Control File\s+%s.+Socket File\s+%s.*Log File\s+%s\n\s*`, daemon.Pid(), pidFile, ctrlFile, socketFile, logFile)
+	apachePattern := `Process 'apache'.+status\s+Running.+uptime\s+\d+.+monitoring status\s+monitored\n\s*`
+	mysqlPattern := `Process 'mysql'.+status\s+Running.+uptime\s+\d+.+monitoring status\s+monitored\n\s*`
 
-	statusStr := `(?s)` +
-		fmt.Sprintf(`Uptime\s+\d+.*.+Pid\s+%d.+Pid File\s+%s.+Control File\s+%s.+Socket File\s+%s.*Log File\s+%s.+`, daemon.Pid(), pidFile, ctrlFile, socketFile, logFile) +
-		`Process 'apache'.+status\s+Running.+uptime\s+\d+.+monitoring status\s+monitored.*` +
-		`Process 'mysql'.+status\s+Running.+uptime\s+\d+.+monitoring status\s+monitored.*`
+	gonit(flags, "status").AssertSuccessMatch(t, `(?s)`+
+		statusHeaderPattern+
+		apachePattern+
+		mysqlPattern+`$`,
+	)
+	gonit(flags, "status", "apache").AssertSuccessMatch(t, `(?s)`+
+		statusHeaderPattern+
+		apachePattern+`$`,
+	)
+	gonit(flags, "status", "mysql").AssertSuccessMatch(t, `(?s)`+
+		statusHeaderPattern+
+		mysqlPattern+`$`,
+	)
 
-	gonit(flags, "status").AssertSuccessMatch(t, statusStr)
+	gonit(flags, "status", "apache", "mysql").AssertErrorMatch(suite.T(), "Too many arguments provided. Only an optional service name is allowed")
 
 	daemon.TearDown()
 	daemon.RequireStopped(t)
@@ -853,13 +865,24 @@ func (suite *CmdSuite) TestSummaryCommand() {
 	time.Sleep(1500 * time.Millisecond)
 	daemon.RequireRunning(t)
 	defer daemon.TearDown()
+	summaryHeaderPattern := `Uptime\s+\d+[^\s]+\n.+`
+	apachePattern := `Process apache\s+Running\n\s*`
+	mysqlPattern := `Process mysql\s+Running\n\s*`
 
-	statusStr := `(?s)` +
-		`Uptime\s+\d+.+` +
-		`Process apache\s+Running.*` +
-		`Process mysql\s+Running`
+	gonit(flags, "summary").AssertSuccessMatch(t, `(?s)`+
+		summaryHeaderPattern+
+		apachePattern+
+		mysqlPattern+`$`)
 
-	gonit(flags, "summary").AssertSuccessMatch(t, statusStr)
+	gonit(flags, "summary", "apache").AssertSuccessMatch(t, `(?s)`+
+		summaryHeaderPattern+
+		apachePattern+`$`)
+
+	gonit(flags, "summary", "mysql").AssertSuccessMatch(t, `(?s)`+
+		summaryHeaderPattern+
+		mysqlPattern+`$`)
+
+	gonit(flags, "summary", "apache", "mysql").AssertErrorMatch(suite.T(), "Too many arguments provided. Only an optional service name is allowed")
 
 	// This is not a cleanup operation, we are synchronously requesting
 	// the daemon to be stopped

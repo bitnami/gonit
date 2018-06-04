@@ -19,7 +19,7 @@ DIST_DIR := ./dist/gonit
 VENDOR := vendor
 BUILD_DATE := $(shell date -u '+%Y-%m-%d %I:%M:%S UTC' 2> /dev/null)
 GIT_HASH := $(shell git rev-parse HEAD 2> /dev/null)
-GO_BUILD := go build -o $(DIST_DIR)/gonit  -ldflags "-X 'main.buildDate=$(BUILD_DATE)' -X main.commit=$(GIT_HASH)"
+GO_BUILD := go build -o $(DIST_DIR)/gonit  -ldflags "-X 'main.buildDate=$(BUILD_DATE)' -X main.commit=$(GIT_HASH) -s -w"
 
 # This allows forcing the dependencies to finish installing even in parallel mode
 all: get-build-deps

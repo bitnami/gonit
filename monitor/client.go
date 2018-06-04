@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	u "net/url"
+
 	"net/http"
 	"time"
 )
@@ -36,8 +38,12 @@ func NewClient(socket string) interface {
 
 // StatusText returns a string containing a long description of all checks
 // and Monitor attributes
-func (c *Client) StatusText() string {
-	r, err := c.httpc.Get("http://localhost/status")
+func (c *Client) StatusText(args ...string) string {
+	url := "http://localhost/status"
+	if len(args) > 0 {
+		url = fmt.Sprintf("%s/%s", url, u.PathEscape(args[0]))
+	}
+	r, err := c.httpc.Get(url)
 	if err != nil {
 		c.Error = fmt.Errorf("Error getting status %s", err.Error())
 		return ""
@@ -52,8 +58,12 @@ func (c *Client) StatusText() string {
 
 // SummaryText returns a string containing a short status summary for every
 // check registered
-func (c *Client) SummaryText() string {
-	r, err := c.httpc.Get("http://localhost/summary")
+func (c *Client) SummaryText(args ...string) string {
+	url := "http://localhost/summary"
+	if len(args) > 0 {
+		url = fmt.Sprintf("%s/%s", url, u.PathEscape(args[0]))
+	}
+	r, err := c.httpc.Get(url)
 	if err != nil {
 		c.Error = fmt.Errorf("Error getting summary %s", err.Error())
 		return ""

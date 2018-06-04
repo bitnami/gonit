@@ -613,10 +613,25 @@ func TestSummaryText(t *testing.T) {
 
 	app.AddCheck(dc1)
 	app.AddCheck(dc2)
-
+	headerPattern := `^\s*Uptime 0s?\s*\n\n`
+	dummy1Pattern := `Process\s+dummy1\s+Running\n`
+	dummy2Pattern := `Process\s+dummy2\s+Stopped\n`
 	assert.Regexp(t, regexp.MustCompile(
-		"^\\s*Uptime 0s?\\s*\n\nProcess\\s+dummy1\\s+Running\nProcess\\s+dummy2\\s+Stopped\n$",
+		headerPattern+dummy1Pattern+dummy2Pattern+`$`,
 	), app.SummaryText())
+	assert.Regexp(t, regexp.MustCompile(
+		headerPattern+dummy1Pattern+dummy2Pattern+`$`,
+	), app.SummaryText("dummy1", "dummy2"))
+	assert.Regexp(t, regexp.MustCompile(
+		headerPattern+dummy2Pattern+dummy1Pattern+`$`,
+	), app.SummaryText("dummy2", "dummy1"))
+	assert.Regexp(t, regexp.MustCompile(
+		headerPattern+dummy1Pattern+`$`,
+	), app.SummaryText("dummy1"))
+	assert.Regexp(t, regexp.MustCompile(
+		headerPattern+dummy2Pattern+`$`,
+	), app.SummaryText("dummy2"))
+
 }
 
 func TestStatusText(t *testing.T) {
@@ -637,20 +652,23 @@ func TestStatusText(t *testing.T) {
 
 	app.AddCheck(dc1)
 	app.AddCheck(dc2)
-
+	dummy1Pattern := `\s*Process\s+'dummy1'\s*\n\s*status\s+Running\n\s*pid\s*\d+\n\s*uptime\s*\d+s?\n\s*monitoring status\s*monitored\n\s*`
+	dummy2Pattern := `\s*Process\s+'dummy2'\s*\n\s*status\s+Stopped\n\s*uptime\s*0s?\n\s*monitoring status\s*monitored\n\s*`
 	assert.Regexp(t, regexp.MustCompile(
-		statusTextHeaderPattern+`\s*Process\s+'dummy1'\s*
-\s*status\s+Running
-\s*pid\s*\d+
-\s*uptime\s*\d+s?
-\s*monitoring status\s*monitored
-
-Process\s+'dummy2'\s*
-\s*status\s+Stopped
-\s*uptime\s*0s?
-\s*monitoring status\s*monitored
-`,
+		statusTextHeaderPattern+dummy1Pattern+`\n`+dummy2Pattern+`$`,
 	), app.StatusText())
+	assert.Regexp(t, regexp.MustCompile(
+		statusTextHeaderPattern+dummy1Pattern+`\n`+dummy2Pattern+`$`,
+	), app.StatusText("dummy1", "dummy2"))
+	assert.Regexp(t, regexp.MustCompile(
+		statusTextHeaderPattern+dummy2Pattern+`\n`+dummy1Pattern+`$`,
+	), app.StatusText("dummy2", "dummy1"))
+	assert.Regexp(t, regexp.MustCompile(
+		statusTextHeaderPattern+dummy1Pattern+"$",
+	), app.StatusText("dummy1"))
+	assert.Regexp(t, regexp.MustCompile(
+		statusTextHeaderPattern+dummy2Pattern+"$",
+	), app.StatusText("dummy2"))
 }
 
 func loadDummyScenario(t *testing.T, rootDir string, ids []string) (*Monitor, error) {
