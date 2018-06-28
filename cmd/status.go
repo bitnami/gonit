@@ -13,12 +13,16 @@ var statusCmd = &cobra.Command{
 	Short: "Print full status information for each service",
 	Long:  "Print full status information for each service",
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) > 1 {
+			fmt.Fprintln(os.Stderr, "Too many arguments provided. Only an optional service name is allowed")
+			os.Exit(1)
+		}
 		if !isDaemonRunning() {
 			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", daemonPidFile())
 			os.Exit(1)
 
 		} else if cm := getChecksManager(); cm != nil {
-			str := cm.StatusText()
+			str := cm.StatusText(args...)
 			if str != "" {
 				fmt.Println(str)
 			} else {

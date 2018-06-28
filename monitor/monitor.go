@@ -56,8 +56,8 @@ type ChecksManager interface {
 	StartAll() []error
 	StopAll() []error
 	RestartAll() []error
-	SummaryText() string
-	StatusText() string
+	SummaryText(args ...string) string
+	StatusText(args ...string) string
 }
 
 // Monitor represents an instance of the monitor application
@@ -185,6 +185,26 @@ func (m *Monitor) UpdateDatabase() error {
 		}
 	}
 	return m.database.Serialize()
+}
+
+func (m *Monitor) findChecks(ids ...string) []interface {
+	Checkable
+} {
+	if len(ids) == 0 {
+		return m.checks
+	}
+	checkList := make([]interface {
+		Checkable
+	}, 0)
+	for _, id := range ids {
+		c := m.FindCheck(id)
+		if c == nil {
+			m.logger.Warnf("Cannot find service %q", id)
+			continue
+		}
+		checkList = append(checkList, c)
+	}
+	return checkList
 }
 
 // FindCheck looks for a registered Check by id
@@ -451,10 +471,10 @@ func (m *Monitor) RestartAll() []error {
 
 // SummaryText returns a string containing a short status summary for every
 // check registered
-func (m *Monitor) SummaryText() string {
+func (m *Monitor) SummaryText(args ...string) string {
 	s := ""
 	s += fmt.Sprintf("Uptime %v\n\n", utils.RoundDuration(m.Uptime()))
-	for _, c := range m.checks {
+	for _, c := range m.findChecks(args...) {
 		s += fmt.Sprintln(c.SummaryText())
 	}
 	return s
@@ -462,7 +482,7 @@ func (m *Monitor) SummaryText() string {
 
 // StatusText returns a string containing a long description of all checks
 // and Monitor attributes
-func (m *Monitor) StatusText() string {
+func (m *Monitor) StatusText(args ...string) string {
 	s := ""
 	lc := m.LastCheck()
 	s += fmt.Sprintf(`
@@ -485,7 +505,7 @@ func (m *Monitor) StatusText() string {
 		"Log File", m.LogFile,
 	)
 
-	for _, c := range m.checks {
+	for _, c := range m.findChecks(args...) {
 		s += fmt.Sprintln(c)
 	}
 	return s

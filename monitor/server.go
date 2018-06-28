@@ -181,15 +181,22 @@ func createServer(monitor *Monitor) *monitorServer {
 		}(cb)
 	}
 
-	for id, fn := range map[string]func() string{
+	for id, fn := range map[string]func(args ...string) string{
 		"status":  monitor.StatusText,
 		"summary": monitor.SummaryText,
 	} {
-		func(cmd string, cb func() string) {
+		func(cmd string, cb func(args ...string) string) {
 			router.GET(fmt.Sprintf("/%s", cmd), func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 				s.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s\"", cmd)
 				fmt.Fprintf(w, s.formatResponse(func() (bool, string) {
 					return true, cb()
+				}))
+			})
+			router.GET(fmt.Sprintf("/%s/:service", cmd), func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+				serviceName := ps.ByName("service")
+				s.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s %s\"", cmd, serviceName)
+				fmt.Fprintf(w, s.formatResponse(func() (bool, string) {
+					return true, cb(serviceName)
 				}))
 			})
 		}(id, fn)

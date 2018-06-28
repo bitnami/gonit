@@ -89,10 +89,7 @@ func (ds *dummyService) Restart() error {
 	if err := ds.Stop(); err != nil {
 		return err
 	}
-	if err := ds.Start(); err != nil {
-		return err
-	}
-	return nil
+	return ds.Start()
 }
 
 type dummyCheck struct {

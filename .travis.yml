@@ -1,11 +1,15 @@
 language: go
 go:
-  - 1.6
-  - 1.7
+  - 1.8
 
 os:
   - linux
   - osx
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - os: osx
 
 install: make get-deps
 
