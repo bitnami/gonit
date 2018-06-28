@@ -7,6 +7,8 @@ _gonit_ is a GPLv2 drop in replacement for [monit](https://mmonit.com/monit/).
 
 Currently, it only supports a subset of its configuration settings and only process type checks.
 
+It requires Go 1.8 (or newer) to build.
+
 ## Installation
 
 ```
