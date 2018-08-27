@@ -12,6 +12,5 @@ Before submitting a change:
 
 Once every works as expected:
 
-* Submit our [Contributor License Agreement](CLA.md)
 * Push your changes to a branch in your fork of the repository
 * Submit a pull request
