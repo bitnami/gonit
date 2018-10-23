@@ -10,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bitnami/gonit/utils"
-
 	"github.com/bitnami/gonit/log"
+	"github.com/bitnami/gonit/utils"
 )
 
 // CheckMaxStartTries defines a global default value for how many failed start attempts are made

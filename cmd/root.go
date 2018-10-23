@@ -8,11 +8,10 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/VividCortex/godaemon"
 	"github.com/bitnami/gonit/log"
 	"github.com/bitnami/gonit/monitor"
 	"github.com/bitnami/gonit/utils"
-
-	"github.com/VividCortex/godaemon"
 	"github.com/spf13/cobra"
 )
 

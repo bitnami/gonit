@@ -48,7 +48,7 @@ get-build-deps:
 	@echo "+ Downloading build dependencies"
 	@go get golang.org/x/tools/cmd/goimports
 	@go get github.com/tools/godep
-	@go get github.com/golang/lint/golint
+	@go get golang.org/x/lint/golint
 	@go get github.com/wadey/gocovmerge
 
 

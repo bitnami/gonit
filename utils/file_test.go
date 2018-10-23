@@ -20,7 +20,7 @@ func TestIsFile(t *testing.T) {
 		linkToDir:                         false,
 		brokenLink:                        false,
 		sb.Normalize("non-existent-path"): false,
-		file: true,
+		file:                              true,
 	} {
 		assert.Equal(t, IsFile(path), expected,
 			"Expected IsFile('%s') to be '%t'", path, expected)
@@ -35,11 +35,11 @@ func TestFileExists(t *testing.T) {
 	nonExistingFile := sb.TempFile()
 
 	for path, expected := range map[string]bool{
-		existingFile:                                  true,
-		existingDir:                                   true,
-		nonTraversableDir:                             true,
+		existingFile:      true,
+		existingDir:       true,
+		nonTraversableDir: true,
 		filepath.Join(nonTraversableDir, "dummy.txt"): false,
-		nonExistingFile:                               false,
+		nonExistingFile: false,
 	} {
 		assert.Equal(t, FileExists(path), expected,
 			"Expected FileExists('%s') to be '%t'", path, expected)
@@ -78,13 +78,13 @@ func TestIsWritableFile(t *testing.T) {
 	nonExistingFile := sb.TempFile()
 
 	for path, expected := range map[string]bool{
-		writableFile:                                true,
-		nonWritableFile:                             false,
-		writableDir:                                 false,
-		filepath.Join(writableDir, "sample.txt"):    true,
+		writableFile:                             true,
+		nonWritableFile:                          false,
+		writableDir:                              false,
+		filepath.Join(writableDir, "sample.txt"): true,
 		filepath.Join(nonWritableDir, "sample.txt"): false,
-		nonWritableDir:                              false,
-		nonExistingFile:                             true,
+		nonWritableDir:  false,
+		nonExistingFile: true,
 	} {
 		assert.Equal(t, IsWritableFile(path), expected,
 			"Expected IsWritableFile('%s') to be '%t'", path, expected)

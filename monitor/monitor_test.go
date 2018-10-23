@@ -14,9 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitnami/gonit/log"
-
 	gt "github.com/bitnami/gonit/gonittest"
+	"github.com/bitnami/gonit/log"
 	tu "github.com/bitnami/gonit/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
