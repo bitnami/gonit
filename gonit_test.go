@@ -13,11 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitnami/gonit/utils"
-
 	gt "github.com/bitnami/gonit/gonittest"
 	"github.com/bitnami/gonit/monitor"
 	tu "github.com/bitnami/gonit/testutils"
+	"github.com/bitnami/gonit/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

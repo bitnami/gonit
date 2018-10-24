@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	u "net/url"
-
 	"net/http"
+	u "net/url"
 	"time"
 )
 

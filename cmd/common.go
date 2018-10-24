@@ -9,7 +9,6 @@ import (
 
 	"github.com/bitnami/gonit/monitor"
 	"github.com/bitnami/gonit/utils"
-
 	"github.com/spf13/cobra"
 )
 
