@@ -7,7 +7,7 @@ import (
 	"github.com/bitnami/gonit/cmd"
 )
 
-var version = "0.2.0"
+var version = "0.2.2"
 var buildDate = ""
 var commit = ""
 
