@@ -37,7 +37,7 @@ Usage:
 
 Available Commands:
   monitor     Monitor service
-  quit        Terminate the executing of a running daemin
+  quit        Terminate the execution of a running daemon
   reload      Reinitialize tool
   restart     Restart service
   start       Start service

@@ -9,7 +9,7 @@ import (
 
 var quitCmd = &cobra.Command{
 	Use:   "quit",
-	Short: "Terminate the executing of a running daemin",
+	Short: "Terminate the execution of a running daemon",
 	Run: func(cmd *cobra.Command, args []string) {
 		if isDaemonRunning() {
 			quitDaemon()
