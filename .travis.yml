@@ -16,6 +16,7 @@ install: make get-deps
 script:
   - make vet
   - make lint
+  - make test
   - make cover
   - make race-test
   - make build
