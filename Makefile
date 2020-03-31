@@ -80,7 +80,7 @@ test: $(addprefix test-, $(PACKAGES))
 
 race-test: $(addprefix race-test-, $(PACKAGES))
 
-cover: test $(addprefix cover-, $(PACKAGES))
+cover: $(addprefix cover-, $(PACKAGES))
 	@$(MAKE) -s validate-command-gocovmerge
 	@gocovmerge $(wildcard $(BUILD_DIR)/*.coverprofile) > $(BUILD_DIR)/cover.out
 	$(GO_COVER) -html=$(BUILD_DIR)/cover.out -o=$(BUILD_DIR)/coverage.html
