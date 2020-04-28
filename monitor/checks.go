@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/bitnami/gonit/log"
@@ -334,7 +335,10 @@ func newCommand(cmdStr string, timeout time.Duration, opts Opts) *Command {
 func (c *Command) Exec() {
 	// TODO REPORT error, track std streams
 	c.logger.Debugf("/bin/bash -c %s", c.Cmd)
-	c.logger.Debug(exec.Command("/bin/bash", "-c", c.Cmd).Run())
+
+	cmd := exec.Command("/bin/bash", "-c", c.Cmd)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	c.logger.Debug(cmd.Run())
 }
 
 func formatColumns(len int, args ...interface{}) string {
