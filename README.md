@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/bitnami/gonit)](https://goreportcard.com/report/github.com/bitnami/gonit)
-[![Build Status](https://api.travis-ci.org/bitnami/gonit.svg?branch=master)](http://travis-ci.org/bitnami/gonit)
+[![Build Status](https://circleci.com/gh/bitnami/gonit.svg?style=svg)](https://circleci.com/gh/bitnami/gonit)
 
 # gonit
 
