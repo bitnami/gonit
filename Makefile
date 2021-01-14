@@ -19,7 +19,7 @@ DIST_DIR := ./dist/gonit
 VENDOR := vendor
 BUILD_DATE := $(shell date -u '+%Y-%m-%d %I:%M:%S UTC' 2> /dev/null)
 GIT_HASH := $(shell git rev-parse HEAD 2> /dev/null)
-GO_BUILD := go build -o $(DIST_DIR)/gonit  -ldflags "-X 'main.buildDate=$(BUILD_DATE)' -X main.commit=$(GIT_HASH) -s -w"
+GO_BUILD := go build -ldflags "-X 'main.buildDate=$(BUILD_DATE)' -X main.commit=$(GIT_HASH) -s -w"
 
 # This allows forcing the dependencies to finish installing even in parallel mode
 all: get-build-deps
@@ -31,9 +31,16 @@ parallelizable-steps: vet lint build test race-test cover
 build:
 	@echo "+ $@"
 	@mkdir -p $(DIST_DIR)
-	@$(GO_BUILD) .
+	@$(GO_BUILD) -o $(DIST_DIR)/gonit .
 	@strip $(DIST_DIR)/gonit
 	@echo "*** Gonit binary created under $(DIST_DIR)/gonit ***"
+
+build/arm64:
+	@echo "+ $@"
+	@mkdir -p $(DIST_DIR)
+	@$(GO_BUILD) -o $(DIST_DIR)/arm64/gonit .
+	@strip $(DIST_DIR)/arm64/gonit
+	@echo "*** Gonit binary created under $(DIST_DIR)/arm64/gonit ***"
 
 clean:
 	-rm -rf $(BUILD_DIR)
