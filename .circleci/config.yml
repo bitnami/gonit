@@ -16,3 +16,6 @@ jobs:
       - store_artifacts:
           path: /go/src/github.com/bitnami/gonit/dist/gonit/gonit
           destination: gonit
+      - store_artifacts:
+          path: /go/src/github.com/bitnami/gonit/dist/gonit/arm64/gonit
+          destination: gonit-arm64
