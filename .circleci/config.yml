@@ -1,0 +1,21 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/bitnami/gonit
+    steps:
+      - checkout
+      - run: make get-deps
+      - run: make vet
+      - run: make lint
+      - run: make cover
+      - run: make race-test
+      - run: make build
+      - run: make build/arm64
+      - store_artifacts:
+        path: /go/src/github.com/bitnami/gonit/dist/gonit/gonit
+        destination: gonit
+      - store_artifacts:
+        path: /go/src/github.com/bitnami/gonit/dist/gonit/arm64/gonit
+        destination: gonit-arm64
