@@ -9,6 +9,7 @@ jobs:
       - run: make get-deps
       - run: make vet
       - run: make lint
+      - run: make test
       - run: make cover
       - run: make race-test
       - run: make build
