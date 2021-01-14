@@ -38,8 +38,7 @@ build:
 build/arm64:
 	@echo "+ $@"
 	@mkdir -p $(DIST_DIR)
-	@$(GO_BUILD) -o $(DIST_DIR)/arm64/gonit .
-	@strip $(DIST_DIR)/arm64/gonit
+	@GOARCH=arm64 $(GO_BUILD) -o $(DIST_DIR)/arm64/gonit .
 	@echo "*** Gonit binary created under $(DIST_DIR)/arm64/gonit ***"
 
 clean:
