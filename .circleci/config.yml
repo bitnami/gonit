@@ -12,10 +12,6 @@ jobs:
       - run: make cover
       - run: make race-test
       - run: make build
-      - run: make build/arm64
       - store_artifacts:
-        path: /go/src/github.com/bitnami/gonit/dist/gonit/gonit
-        destination: gonit
-      - store_artifacts:
-        path: /go/src/github.com/bitnami/gonit/dist/gonit/arm64/gonit
-        destination: gonit-arm64
+          path: /go/src/github.com/bitnami/gonit/dist/gonit/gonit
+          destination: gonit
