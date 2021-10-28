@@ -9,8 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bitnami/gonit/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // Logger defines a logger object
