@@ -36,6 +36,8 @@ jobs:
         run: make vet
       - name: Lint
         run: make lint
+      - name: Test
+        run: make test
       - name: Cover
         run: make cover
       - name: Race Test
