@@ -1,0 +1,99 @@
+name: CI
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches:
+      - master
+
+  release:
+    types: [published]
+
+  pull_request:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-and-test:
+    runs-on: ubuntu-20.04
+    name: Build and Test
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.10' # The Go version to download (if necessary) and use.
+      - name: Install Build Dependencies
+        run: make get-build-deps
+      - name: Download required modules
+        run: make download
+      - name: Vet
+        run: make vet
+      - name: Lint
+        run: make lint
+      - name: Cover
+        run: make cover
+      - name: Race Test
+        run: make race-test
+      - name: Build
+        run: |
+          set -ex
+          for dist in amd64 arm64; do
+             target=out/gonit-linux-$dist
+             rm -rf "$target"
+             make build/$dist TOOL_PATH="$target"
+             file $target
+             tar -C "$(dirname "$target")" -czf "$target.tar.gz" "$(basename "$target")"
+          done
+      - uses: actions/upload-artifact@v2
+        with:
+          name: built-binaries
+          path: |
+            out/*.tar.gz
+  release:
+    needs: [ 'build-and-test' ]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: ./artifacts
+      - name: Set tag name
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+      - name: Release
+        run: |
+          set -e
+          create_digest_file() {
+              local digest_file=${1:?You must provide the digest file path}
+              shift
+              for file in "$@"; do
+                (
+                   cd "$(dirname "$file")"
+                   sha256sum "$(basename "$file")"
+                ) >> "$digest_file"
+              done
+          }
+          assets=( ./artifacts/built-binaries/*.gz )
+
+          tag_name="${{ steps.vars.outputs.tag }}"
+          checksums_file="${tag_name}_checksums.txt"
+          create_digest_file "$checksums_file" "${assets[@]}"
+          assets+=( "$checksums_file" )
+          if gh release view "$tag_name" >/dev/null 2>/dev/null; then
+            echo "Release $tag_name already exists. Updating"
+            gh release upload "$tag_name" "${assets[@]}"
+          else
+            echo "Creating new release $tag_name"
+            # Format checksums for the release text
+            printf '```\n%s\n```' "$(<"$checksums_file")" > release.txt
+            gh release create -t "$tag_name" "$tag_name" -F release.txt "${assets[@]}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
