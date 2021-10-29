@@ -1,5 +1,9 @@
 .PHONY: test cover build all clean parallelizable-steps
 
+SHELL := /bin/bash
+GOPATH ?= $(shell go env GOPATH)
+PATH := $(GOPATH)/bin:$(PATH)
+
 PACKAGES := utils database testutils monitor
 LINT_PACKAGES = $(PACKAGES) gonittest log cmd
 VET_PACKAGES = $(PACKAGES) gonittest log cmd
@@ -20,40 +24,36 @@ VENDOR := vendor
 BUILD_DATE := $(shell date -u '+%Y-%m-%d %I:%M:%S UTC' 2> /dev/null)
 GIT_HASH := $(shell git rev-parse HEAD 2> /dev/null)
 GO_BUILD := go build -ldflags "-X 'main.buildDate=$(BUILD_DATE)' -X main.commit=$(GIT_HASH) -s -w"
+GO_MOD := @go mod
+TOOL_PATH ?= $(DIST_DIR)/$(TOOL_NAME)
 
 # This allows forcing the dependencies to finish installing even in parallel mode
-all: get-build-deps
+all:
+	@$(MAKE) get-build-deps
+	@$(MAKE) download
 	@$(MAKE) -s validate-command-gocovmerge validate-command-golint
 	@$(MAKE) -s parallelizable-steps
 
 parallelizable-steps: vet lint build test race-test cover
 
-build:
-	@echo "+ $@"
-	@mkdir -p $(DIST_DIR)
-	@$(GO_BUILD) -o $(DIST_DIR)/gonit .
-	@strip $(DIST_DIR)/gonit
-	@echo "*** Gonit binary created under $(DIST_DIR)/gonit ***"
+download:
+	$(GO_MOD) download
 
-build/arm64:
-	@echo "+ $@"
+build/%:
+	@echo "+ Building GOARCH=$(*F)"
 	@mkdir -p $(DIST_DIR)
-	@GOARCH=arm64 $(GO_BUILD) -o $(DIST_DIR)/arm64/gonit .
-	@echo "*** Gonit binary created under $(DIST_DIR)/arm64/gonit ***"
+	@GOARCH=$(*F) $(GO_BUILD) -o $(TOOL_PATH) .
+	@echo "*** Gonit binary created under $(TOOL_PATH) ***"
+
+build: build/amd64
 
 clean:
 	-rm -rf $(BUILD_DIR)
 	-rm -rf $(DIST_DIR)
 
-get-deps:
-	@echo "+ Downloading dependencies"
-	@go get ./...
-	@$(MAKE) get-build-deps
-
 get-build-deps:
 	@echo "+ Downloading build dependencies"
 	@go get golang.org/x/tools/cmd/goimports
-	@go get github.com/tools/godep
 	@go get golang.org/x/lint/golint
 	@go get github.com/wadey/gocovmerge
 
