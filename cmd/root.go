@@ -5,11 +5,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"syscall"
 
 	"github.com/VividCortex/godaemon"
-	"github.com/bitnami/gonit/log"
 	"github.com/bitnami/gonit/monitor"
 	"github.com/bitnami/gonit/utils"
 	"github.com/spf13/cobra"
@@ -45,19 +43,6 @@ func setupSignals(app *monitor.Monitor) {
 			}
 		}
 	}()
-}
-
-func printRuntimeDebugStats(l *log.Logger) {
-	stats := runtime.MemStats{}
-	runtime.ReadMemStats(&stats)
-	str := fmt.Sprintf("RUNTIME DEBUG:\n")
-	for title, value := range map[string]interface{}{
-		"Routines Running": runtime.NumGoroutine(),
-		"Memory":           fmt.Sprintf("%dKB", stats.Alloc/1024),
-	} {
-		str += fmt.Sprintf("%-40s %15v\n", title, value)
-	}
-	l.MDebugf(str)
 }
 
 // RunMonitor executes the monitor code in an infinite loop with

@@ -274,7 +274,7 @@ func TestLoopForever(t *testing.T) {
 // TODO: This is slow, move it to the main monit tests once ready
 func TestLoopForeverStopsCheckingMultipleErrors(t *testing.T) {
 	t.Parallel()
-	rootDir, _ := sb.Mkdir(sb.TempFile("forever_root"), os.FileMode(755))
+	rootDir, _ := sb.Mkdir(sb.TempFile("forever_root"), os.FileMode(0755))
 	id1 := "sample1"
 	id2 := "sample2"
 	app, err := loadDummyScenario(t, rootDir, []string{id1, id2})
@@ -327,7 +327,7 @@ func TestHTTPServerSupported(t *testing.T) {
 func TestStartServer(t *testing.T) {
 	app, err := New(Config{})
 	require.NoError(t, err)
-	tu.AssertErrorMatch(t, app.StartServer(), regexp.MustCompile("Don't know how to start the HTTP server \\(missing socket\\)"))
+	tu.AssertErrorMatch(t, app.StartServer(), regexp.MustCompile(`Don't know how to start the HTTP server \(missing socket\)`))
 	nonWritableDir, _ := sb.Mkdir(sb.TempFile(), os.FileMode(0555))
 	app.SocketFile = filepath.Join(nonWritableDir, "sample.sock")
 	tu.AssertErrorMatch(t, app.StartServer(), regexp.MustCompile("Error listening to socket"))
@@ -602,7 +602,7 @@ func TestSummaryText(t *testing.T) {
 	app, err := New(Config{})
 	require.NoError(t, err)
 	// With no checks
-	assert.Regexp(t, regexp.MustCompile("^\\s*Uptime 0s?\\s*$"), app.SummaryText())
+	assert.Regexp(t, regexp.MustCompile(`^\s*Uptime 0s?\s*$`), app.SummaryText())
 	dc1 := newDummyCheck("dummy1")
 	// Make it to be running
 	f, _ := sb.Write(sb.TempFile(), fmt.Sprintf("%d", syscall.Getpid()))

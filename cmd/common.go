@@ -172,7 +172,6 @@ func flattenErrors(errors []error) error {
 }
 
 type serviceCommand struct {
-	status        string
 	cmd           string
 	singleCheckCb func(string) error
 	multicheckCb  func() []error

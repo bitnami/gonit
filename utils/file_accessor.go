@@ -49,7 +49,8 @@ func Exit(code int, reason string, reasonArgs ...interface{}) {
 }
 
 var (
-	euid, egid, uid, gid  int
+	euid int
+	// euid, egid, uid, gid  int
 	defaultSecureAccessor = NewSecureFileAccessor()
 )
 
@@ -184,7 +185,7 @@ func ReadSecure(file string) (string, error) {
 
 func init() {
 	euid = os.Geteuid()
-	egid = os.Getegid()
-	uid = os.Getuid()
-	gid = os.Getgid()
+	// egid = os.Getegid()
+	// uid = os.Getuid()
+	// gid = os.Getgid()
 }

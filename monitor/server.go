@@ -81,7 +81,7 @@ func (ms *monitorServer) defineServiceCmdRoutes(router *httprouter.Router, id st
 		serviceName := ps.ByName("service")
 		ms.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s %s\"", id, serviceName)
 
-		fmt.Fprintf(w, ms.formatResponse(func() (bool, string) {
+		fmt.Fprintln(w, ms.formatResponse(func() (bool, string) {
 			err := cb(serviceName)
 			if err != nil {
 				return false, err.Error()
@@ -92,7 +92,7 @@ func (ms *monitorServer) defineServiceCmdRoutes(router *httprouter.Router, id st
 
 	router.POST(fmt.Sprintf("/%s_all", id), func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		ms.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s all\"", id)
-		fmt.Fprintf(w, ms.formatResponse(func() (bool, string) {
+		fmt.Fprintln(w, ms.formatResponse(func() (bool, string) {
 			errMsgs := []string{}
 			for _, c := range ms.monitor.checks {
 				if shouldSkip(c) {
@@ -188,14 +188,14 @@ func createServer(monitor *Monitor) *monitorServer {
 		func(cmd string, cb func(args ...string) string) {
 			router.GET(fmt.Sprintf("/%s", cmd), func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 				s.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s\"", cmd)
-				fmt.Fprintf(w, s.formatResponse(func() (bool, string) {
+				fmt.Fprintln(w, s.formatResponse(func() (bool, string) {
 					return true, cb()
 				}))
 			})
 			router.GET(fmt.Sprintf("/%s/:service", cmd), func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 				serviceName := ps.ByName("service")
 				s.logger.Debugf("[CLIENT_REQUEST] Requested execution of \"%s %s\"", cmd, serviceName)
-				fmt.Fprintf(w, s.formatResponse(func() (bool, string) {
+				fmt.Fprintln(w, s.formatResponse(func() (bool, string) {
 					return true, cb(serviceName)
 				}))
 			})

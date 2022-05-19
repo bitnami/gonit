@@ -220,7 +220,6 @@ type check struct {
 	// If not, it won't be automatically started in case of unhandled stops
 	monitored syncBool
 	logger    Logger
-	lastCheck time.Time
 }
 
 // GetTimeout returns the check Timeout
@@ -298,7 +297,7 @@ func newCheck(id string, kind string) interface {
 func newCheckFromData(data string) (interface {
 	Checkable
 }, error) {
-	checkPattern := "(\n|^)check\\s+([^\\s]+)\\s+([^\\s]+)((.|\n)*)"
+	checkPattern := `(\n|^)check\s+([^\s]+)\s+([^\s]+)((.|\n)*)`
 	re := regexp.MustCompile(checkPattern)
 	if match := re.FindStringSubmatch(data); match != nil {
 		kind := match[2]
@@ -341,13 +340,6 @@ func (c *Command) Exec() {
 	c.logger.Debug(cmd.Run())
 }
 
-func formatColumns(len int, args ...interface{}) string {
-	res := ""
-	for _, str := range args {
-		res += fmt.Sprintf(fmt.Sprintf("%%-%ds", len), fmt.Sprintln(str))
-	}
-	return res
-}
 func (c *ProcessCheck) getStatusString() (str string) {
 	if c.IsMonitored() {
 		if c.IsRunning() {
@@ -570,7 +562,7 @@ func (c *ProcessCheck) Uptime() time.Duration {
 	if c.startedAt.Get().Equal(time.Time{}) {
 		return time.Duration(0)
 	}
-	return time.Now().Sub(c.startedAt.Get())
+	return time.Since(c.startedAt.Get())
 }
 
 func unquote(str string) string {
@@ -580,7 +572,7 @@ func unquote(str string) string {
 // We should make this generic for all Checks
 func parseWithTimeout(data string) (time.Duration, error) {
 
-	withTimeoutRe := regexp.MustCompile("with\\s+timeout\\s+([^\\s]+)\\s+(millisecond|second|minute|hour|day)s?")
+	withTimeoutRe := regexp.MustCompile(`with\s+timeout\s+([^\s]+)\s+(millisecond|second|minute|hour|day)s?`)
 	t := withTimeoutRe.FindStringSubmatch(data)
 	if t == nil {
 		return 0, nil
@@ -614,13 +606,13 @@ func parseWithTimeout(data string) (time.Duration, error) {
 // and loads the specified settings
 func (c *ProcessCheck) Parse(data string) {
 
-	withRe := regexp.MustCompile("with\\s+([^\\s]+)\\s+([^\\s]+)")
-	groupRe := regexp.MustCompile("group\\s+([^\\s]+)")
-	startRe := regexp.MustCompile("start\\s+program\\s+=\\s+(\"[^\"]+\"|[^\\s]+)([^\n]*)")
-	stopRe := regexp.MustCompile("stop\\s+program\\s+=\\s+(\"[^\"]+\"|[^\\s]+)([^\n]*)")
-	ifRe := regexp.MustCompile("if\\s+([^\n]+)")
+	withRe := regexp.MustCompile(`with\s+([^\s]+)\s+([^\s]+)`)
+	groupRe := regexp.MustCompile(`group\s+([^\\s]+)`)
+	startRe := regexp.MustCompile(`start\s+program\s+=\s+(\"[^\"]+\"|[^\s]+)([^\n]*)`)
+	stopRe := regexp.MustCompile(`stop\s+program\s+=\s+(\"[^\"]+\"|[^\s]+)([^\n]*)`)
+	ifRe := regexp.MustCompile(`if\s+([^\n]+)`)
 	processOptRe := regexp.MustCompile(
-		fmt.Sprintf("^[\\s\n]*(%s|%s|%s|%s|%s)",
+		fmt.Sprintf(`^[\s\n]*(%s|%s|%s|%s|%s)`,
 			groupRe.String(),
 			startRe.String(),
 			stopRe.String(),

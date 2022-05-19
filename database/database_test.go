@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setDbData(db Storer, data map[string]interface{}) []string {
+func setDBData(db Storer, data map[string]interface{}) []string {
 	keys := []string{}
 	for k, v := range data {
 		db.Set(k, v)
@@ -56,7 +56,7 @@ func TestNewFileDatabaseNoFile(t *testing.T) {
 
 	assert.False(t, fileExists(dbFile), "File %s should not exists", dbFile)
 
-	assert.Equal(t, setDbData(db, sampleData), db.Keys())
+	assert.Equal(t, setDBData(db, sampleData), db.Keys())
 
 	db.Serialize()
 
@@ -69,7 +69,7 @@ func TestNewFileDatabaseWithFile(t *testing.T) {
 	db, err := NewFileDatabase(dbFile)
 	require.NoError(t, err)
 
-	assert.Equal(t, setDbData(db, sampleData), db.Keys())
+	assert.Equal(t, setDBData(db, sampleData), db.Keys())
 
 	db.Serialize()
 

@@ -21,6 +21,7 @@ var statusCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Cannot find any running daemon to contact. If it is running, make sure you are pointing to the right pid file (%s)\n", daemonPidFile())
 			os.Exit(1)
 
+			//lint:ignore SA4023 The process is not expected to be running when performing static code check
 		} else if cm := getChecksManager(); cm != nil {
 			str := cm.StatusText(args...)
 			if str != "" {
