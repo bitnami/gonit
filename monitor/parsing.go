@@ -14,8 +14,8 @@ type configParser struct {
 }
 
 func (cp *configParser) cleanLines(data string) string {
-	startWithCommentRe := regexp.MustCompile("^\\s*\\#.*")
-	endsWithCommentRe := regexp.MustCompile("^\\s*([^\\s\\#].*?)\\#")
+	startWithCommentRe := regexp.MustCompile(`^\s*\#.*`)
+	endsWithCommentRe := regexp.MustCompile(`^\s*([^\s\#].*?)\#`)
 	result := []string{}
 	for _, l := range strings.Split(data, "\n") {
 		if startWithCommentRe.MatchString(l) {
@@ -32,7 +32,7 @@ func (cp *configParser) cleanLines(data string) string {
 }
 
 func (cp *configParser) parseVarSet(data string) (key, value string) {
-	re := regexp.MustCompile("\\s*set\\s+([^\\s]+)(.*)")
+	re := regexp.MustCompile(`\s*set\s+([^\s]+)(.*)`)
 	if match := re.FindStringSubmatch(data); match != nil {
 		key = strings.TrimSpace(match[1])
 		value = strings.TrimSpace(match[2])
@@ -42,11 +42,11 @@ func (cp *configParser) parseVarSet(data string) (key, value string) {
 
 func (cp *configParser) parseObjSet(data string) (what string, result map[string]string) {
 	result = make(map[string]string)
-	re := regexp.MustCompile("^\\s*set\\s+(daemon|ssl|tls|httpd|alert|mail-format|mailserver|eventqueue|limits)\\s+(.*)")
+	re := regexp.MustCompile(`^\s*set\s+(daemon|ssl|tls|httpd|alert|mail-format|mailserver|eventqueue|limits)\s+(.*)`)
 
 	if match := re.FindStringSubmatch(data); match != nil {
 		what = match[1]
-		settingsRe := regexp.MustCompile("^\\s*([^\\s]+)\\s+([^\\s]+)(.*$)")
+		settingsRe := regexp.MustCompile(`^\s*([^\s]+)\s+([^\s]+)(.*$)`)
 		toParse := match[2]
 		for {
 			if match = settingsRe.FindStringSubmatch(toParse); match == nil {
@@ -64,7 +64,7 @@ func (cp *configParser) parseObjSet(data string) (what string, result map[string
 func (cp *configParser) parseInclude(data string) map[string]string {
 	result := make(map[string]string)
 	result["pattern"] = ""
-	re := regexp.MustCompile("\\s*include\\s+(.*)")
+	re := regexp.MustCompile(`\s*include\s+(.*)`)
 	if match := re.FindStringSubmatch(data); match != nil {
 		result["pattern"] = match[1]
 	}
@@ -95,12 +95,12 @@ func (cp *configParser) ParseConfig(config string, walker interface {
 
 	// Cleanup comments
 	toParse = cp.cleanLines(toParse)
-	directivePattern := "(\n|^)\\s*(check|include|set)"
+	directivePattern := `(\n|^)\s*(check|include|set)`
 
-	checkPattern := fmt.Sprintf("(%s\\s+((.|\n)*?))((%s (.|\n)*)|$)", directivePattern, directivePattern)
+	checkPattern := fmt.Sprintf(`(%s\s+((.|\n)*?))((%s (.|\n)*)|$)`, directivePattern, directivePattern)
 
 	re := regexp.MustCompile(
-		"(\\s*\\n)*" +
+		`(\s*\n)*` +
 			checkPattern)
 
 	var match []string

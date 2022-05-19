@@ -108,8 +108,7 @@ func (g *GonitDaemon) TearDown() {
 
 type ConfigSuite struct {
 	suite.Suite
-	sb            *tu.Sandbox
-	defaultValues map[string]string
+	sb *tu.Sandbox
 }
 
 func (suite *ConfigSuite) AssertPanicsMatch(fn func(), re *regexp.Regexp) bool {

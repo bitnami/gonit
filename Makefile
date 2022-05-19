@@ -31,7 +31,7 @@ TOOL_PATH ?= $(DIST_DIR)/$(TOOL_NAME)
 all:
 	@$(MAKE) get-build-deps
 	@$(MAKE) download
-	@$(MAKE) -s validate-command-gocovmerge validate-command-golint
+	@$(MAKE) -s validate-command-gocovmerge validate-command-staticcheck
 	@$(MAKE) -s parallelizable-steps
 
 parallelizable-steps: vet lint build test race-test cover
@@ -53,15 +53,13 @@ clean:
 
 get-build-deps:
 	@echo "+ Downloading build dependencies"
-	@go get golang.org/x/tools/cmd/goimports
-	@go get golang.org/x/lint/golint
-	@go get github.com/wadey/gocovmerge
-
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
+	@go install github.com/wadey/gocovmerge@latest
 
 validate-command-%:
 	@which $(*F) > /dev/null || (echo "Tool $(*F) must be in your PATH" 2>&1 && exit 1)
 
-vet:  $(addprefix vet-, $(VET_PACKAGES))
+vet: $(addprefix vet-, $(VET_PACKAGES))
 	@go vet .
 
 vet-%:
@@ -70,22 +68,20 @@ vet-%:
 
 lint: $(addprefix lint-, $(LINT_PACKAGES))
 	@echo "+ $@"
-	@$(MAKE) -s validate-command-golint
-	@golint .
+	@$(MAKE) -s validate-command-staticcheck
+	@staticcheck ./...
 	$(call fmtcheck, .)
 
 lint-%:
 	@echo "+ $@"
-	@golint ./$(*F)
+	@staticcheck ./$(*F)
 	$(call fmtcheck, $(*F))
-
 
 test: $(addprefix test-, $(PACKAGES))
 	@echo "+ Testing gonit tool"
 	@go test .
 
 race-test: $(addprefix race-test-, $(PACKAGES))
-
 
 cover-%: $(BUILD_DIR)/%.coverprofile
 	@echo "+ $@"

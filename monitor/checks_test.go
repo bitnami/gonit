@@ -25,12 +25,6 @@ func (ds *dummyService) getTimesStarted() int {
 	return ds.timesStarted
 }
 
-func (ds *dummyService) setTimesStarted(t int) {
-	defer ds.Unlock()
-	ds.Lock()
-	ds.timesStarted = t
-}
-
 func newDummyService(id string) *dummyService {
 	s := dummyService{ProcessCheck: ProcessCheck{check: &check{ID: id}}}
 	s.startTime = 5 * time.Millisecond
@@ -97,12 +91,6 @@ type dummyCheck struct {
 	ProcessCheck
 	timesCalled int
 	waitTime    time.Duration
-}
-
-func (dc *dummyCheck) getWaitTime() time.Duration {
-	defer dc.RUnlock()
-	dc.RLock()
-	return dc.waitTime
 }
 
 func (dc *dummyCheck) setWaitTime(d time.Duration) {

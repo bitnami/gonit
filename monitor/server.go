@@ -1,5 +1,7 @@
 package monitor
 
+//lint:file-ignore SA1006 Allow printf-style function with dynamic format string without arguments
+
 import (
 	"encoding/json"
 	"fmt"

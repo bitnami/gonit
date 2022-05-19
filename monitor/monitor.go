@@ -161,7 +161,7 @@ func (m *Monitor) Uptime() time.Duration {
 	if m.StartTime.Equal(time.Time{}) {
 		return time.Duration(0)
 	}
-	return time.Now().Sub(m.StartTime)
+	return time.Since(m.StartTime)
 }
 
 // UpdateDatabase updates the file database with the in-memory state
@@ -257,7 +257,7 @@ func (m *Monitor) Reload() error {
 	validator := newValidator()
 	validator.Logger = m.logger
 	new(configParser).ParseConfigFile(m.ControlFile, validator, m.logger)
-	if validator.Success == true {
+	if validator.Success {
 		m.logger.Printf("Configuration validates, loading it....")
 		m.checks = nil
 		for _, c := range validator.Checks {
@@ -277,7 +277,7 @@ func (m *Monitor) Reload() error {
 func (m *Monitor) RuntimeDebugStats() string {
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
-	str := fmt.Sprintf("RUNTIME DEBUG:\n")
+	str := "RUNTIME DEBUG:\n"
 	for title, value := range map[string]interface{}{
 		"Routines Running": runtime.NumGoroutine(),
 		"Memory":           fmt.Sprintf("%dKB", stats.Alloc/1024),
