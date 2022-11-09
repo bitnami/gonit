@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -18,7 +17,7 @@ func ReadPid(file string) (int, error) {
 		return -1, fmt.Errorf("Pid file '%s' does not exist", file)
 	}
 
-	res, err := ioutil.ReadFile(file)
+	res, err := os.ReadFile(file)
 	if err != nil {
 		return -1, fmt.Errorf("Error reading pid file '%s': %s", file, err.Error())
 	}

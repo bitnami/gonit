@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -80,7 +80,7 @@ func (cp *configParser) ParseConfigFile(f string, cw interface {
 	// TODO: Not sure if bug or feature, but monit only validates the first level
 	// config file. Included files permissions and ownership are not validated
 	// data, err := utils.ReadSecure(f)
-	bytes, err := ioutil.ReadFile(utils.AbsFile(f))
+	bytes, err := os.ReadFile(utils.AbsFile(f))
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -33,7 +32,7 @@ func NewSandbox(args ...string) *Sandbox {
 	if len(args) > 0 {
 		root = args[0]
 	} else {
-		root, err = ioutil.TempDir("", "sandbox")
+		root, err = os.MkdirTemp("", "sandbox")
 		if err != nil {
 			log.Fatal("Error creating temporary directory for sandbox")
 		}
@@ -117,7 +116,7 @@ func (sb *Sandbox) Write(path string, data string) (string, error) {
 func (sb *Sandbox) WriteFile(path string, data []byte, mode os.FileMode) (string, error) {
 	f := sb.Normalize(path)
 	sb.Track(f)
-	return f, ioutil.WriteFile(f, data, mode)
+	return f, os.WriteFile(f, data, mode)
 }
 
 // Cleanup removes all the resources created by the sandbox

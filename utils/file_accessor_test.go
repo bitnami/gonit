@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -47,7 +46,7 @@ func TestWriteSecure(t *testing.T) {
 		fileInfo, _ := os.Stat(file)
 		expectedPerm := os.FileMode(0644)
 		assert.Equal(t, fileInfo.Mode().Perm(), expectedPerm.Perm())
-		b, _ := ioutil.ReadFile(file)
+		b, _ := os.ReadFile(file)
 		assert.Equal(t, string(b), data)
 	}
 }
