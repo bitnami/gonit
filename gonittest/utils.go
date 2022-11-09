@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -44,7 +43,7 @@ type tmplResolver struct {
 
 func (r *tmplResolver) LoadFile(path string) error {
 	if r.Error == nil {
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		r.Data, r.Error = string(data), err
 	}
 	return r.Error
@@ -56,7 +55,7 @@ func (r *tmplResolver) Load(data string) {
 
 func (r *tmplResolver) WriteToFile(path string) error {
 	if r.Error == nil {
-		r.Error = ioutil.WriteFile(path, []byte(r.Data), os.FileMode(0755))
+		r.Error = os.WriteFile(path, []byte(r.Data), os.FileMode(0755))
 	}
 	return r.Error
 }

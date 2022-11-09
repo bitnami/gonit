@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
@@ -98,7 +97,7 @@ type FileAccessor interface {
 	WriteFile(file, data string) error
 }
 
-//SecureFileAccessor allows defining the acceptable permission used when
+// SecureFileAccessor allows defining the acceptable permission used when
 // reading and writing files
 type SecureFileAccessor struct {
 	MaxPermissions          os.FileMode
@@ -132,13 +131,13 @@ func (fa *SecureFileAccessor) OpenFile(name string, flag int, perm os.FileMode) 
 // ReadFile allows reading a file if it complies with the required permissions
 func (fa *SecureFileAccessor) ReadFile(file string) (string, error) {
 	fa.EnsurePermissions(file)
-	bytes, err := ioutil.ReadFile(AbsFile(file))
+	bytes, err := os.ReadFile(AbsFile(file))
 	return string(bytes), err
 }
 
 // WriteFile allows writing a file and enforcing its permissions to the configured ones
 func (fa *SecureFileAccessor) WriteFile(file, data string) error {
-	err := ioutil.WriteFile(file, []byte(data), fa.DefaultWritePermissions)
+	err := os.WriteFile(file, []byte(data), fa.DefaultWritePermissions)
 	if err != nil {
 		return err
 	}

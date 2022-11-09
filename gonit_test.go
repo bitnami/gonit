@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -520,7 +519,7 @@ func (suite *CmdSuite) TestReloadCommand() {
 	suite.NotRegexp("(?s).*Process mysql.*", r.stdout)
 
 	suite.NotRegexp("(?s).*Process sample_check.*", r.stdout)
-	ioutil.WriteFile(
+	os.WriteFile(
 		filepath.Join(rootDir, "conf/gonit/conf.d/mysql.conf"),
 		[]byte("check process sample_check"), os.FileMode(0644))
 

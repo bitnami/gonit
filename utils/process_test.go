@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -124,7 +123,7 @@ func TestWritePidSucceeds(t *testing.T) {
 		assert.Equal(t, expectedPerm.Perm(), fileInfo.Mode().Perm(),
 			"Expected %s permissions", expectedPerm)
 
-		d, _ := ioutil.ReadFile(f)
+		d, _ := os.ReadFile(f)
 		readPid, _ := strconv.Atoi(string(d))
 		assert.Equal(t, readPid, pid, "Expected %d PID", pid)
 	}

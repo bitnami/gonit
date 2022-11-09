@@ -3,7 +3,6 @@ package log
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,7 +47,7 @@ func New() *logrus.Logger {
 
 // DummyLogger provides a dummy logger object
 func DummyLogger() *Logger {
-	return StreamLogger(ioutil.Discard)
+	return StreamLogger(io.Discard)
 }
 
 // StreamLogger returns a logger backed by a provided io.Writter

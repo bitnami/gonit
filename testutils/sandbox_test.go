@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,7 +13,7 @@ import (
 )
 
 func TestNewSandbox(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb1 := NewSandbox(root)
@@ -45,7 +44,7 @@ func TestCleanup(t *testing.T) {
 	defer sb.Cleanup()
 
 	tmpFile := filepath.Join(sb.Root, "sample.txt")
-	err := ioutil.WriteFile(tmpFile, []byte{}, os.FileMode(0644))
+	err := os.WriteFile(tmpFile, []byte{}, os.FileMode(0644))
 	require.NoError(t, err)
 
 	assert.NoError(t, sb.Cleanup())
@@ -72,7 +71,7 @@ func TestCleanup(t *testing.T) {
 }
 
 func TestNormalize(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -87,7 +86,7 @@ func TestNormalize(t *testing.T) {
 
 func TestContainsPath(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -111,7 +110,7 @@ func TestContainsPath(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -122,7 +121,7 @@ func TestWriteFile(t *testing.T) {
 	f, err := sb.WriteFile(tail, []byte(data), os.FileMode(0644))
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(root, tail), f)
-	read, err := ioutil.ReadFile(f)
+	read, err := os.ReadFile(f)
 	assert.NoError(t, err)
 
 	assert.Equal(t, data, string(read))
@@ -130,7 +129,7 @@ func TestWriteFile(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -141,14 +140,14 @@ func TestWrite(t *testing.T) {
 	f, err := sb.Write(tail, data)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(root, tail), f)
-	read, err := ioutil.ReadFile(f)
+	read, err := os.ReadFile(f)
 	assert.NoError(t, err)
 
 	assert.Equal(t, data, string(read))
 }
 
 func TestSymlink(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -162,7 +161,7 @@ func TestSymlink(t *testing.T) {
 }
 
 func TestMkdir(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -180,7 +179,7 @@ func TestMkdir(t *testing.T) {
 	assert.True(t, s.IsDir(), "Expected %s to be a directory", fullPath)
 }
 func TestTouch(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -205,7 +204,7 @@ func TestTouch(t *testing.T) {
 }
 
 func TestTempFile(t *testing.T) {
-	root, err := ioutil.TempDir("", "sandbox")
+	root, err := os.MkdirTemp("", "sandbox")
 	require.NoError(t, err)
 
 	sb := NewSandbox(root)
@@ -226,7 +225,7 @@ func TestTempFile(t *testing.T) {
 	// If the file to create exists, an additional numeric index is appended until
 	// the target file does not exists
 	currentIndex := tempFileIndex
-	ioutil.WriteFile(
+	os.WriteFile(
 		filepath.Join(root, fmt.Sprintf("%s%d", tail, currentIndex)),
 		[]byte{}, os.FileMode(0644),
 	)
@@ -235,12 +234,12 @@ func TestTempFile(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s/%s%d0", root, tail, currentIndex), f3)
 
 	currentIndex = tempFileIndex
-	ioutil.WriteFile(
+	os.WriteFile(
 		filepath.Join(root, fmt.Sprintf("%s%d", tail, currentIndex)),
 		[]byte{}, os.FileMode(0644),
 	)
 	for i := 0; i < 2; i++ {
-		ioutil.WriteFile(
+		os.WriteFile(
 			filepath.Join(root, fmt.Sprintf("%s%d%d", tail, currentIndex, i)),
 			[]byte{}, os.FileMode(0644),
 		)
