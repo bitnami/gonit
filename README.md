@@ -11,16 +11,16 @@ It requires Go 1.8 (or newer) to build.
 
 ## Installation
 
-```
-$> go get github.com/bitnami/gonit/...
+```console
+$ go get github.com/bitnami/gonit/...
 ```
 
 ## Building from source
 
-```
-$> git clone https://github.com/bitnami/gonit.git
-$> cd gonit
-$> make build
+```console
+$ git clone https://github.com/bitnami/gonit.git
+$ cd gonit
+$ make build
 + build
 *** Gonit binary created under ./dist/gonit/gonit ***
 ```
@@ -29,8 +29,8 @@ $> make build
 
 You can check gonit's basic usage options by invoking its help menu:
 
-```
-$> gonit -h
+```console
+$ gonit -h
 Usage:
   gonit [flags]
   gonit [command]
@@ -57,6 +57,20 @@ Flags:
   -v, --verbose                 Verbose mode, work noisy (diagnostic output)
 
 Use "gonit [command] --help" for more information about a command.
-
 ```
 
+## License
+
+Copyright &copy; 2023 Bitnami
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
