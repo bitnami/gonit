@@ -3,7 +3,7 @@
 
 # gonit
 
-_gonit_ is a GPLv2 drop in replacement for [monit](https://mmonit.com/monit/).
+_gonit_ is an Apache 2.0 drop in replacement for [monit](https://mmonit.com/monit/).
 
 Currently, it only supports a subset of its configuration settings and only process type checks.
 
@@ -63,6 +63,11 @@ Use "gonit [command] --help" for more information about a command.
 
 Copyright &copy; 2023 Bitnami
 
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
