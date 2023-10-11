@@ -150,8 +150,3 @@ func (sb *Sandbox) Normalize(path string) string {
 	}
 	return filepath.Join(sb.Root, path)
 }
-
-// func init() {
-// 	// rand.Seed(time.Now().UnixNano())
-// 	rand.New(rand.NewSource(time.Now().UnixNano()))
-// }
