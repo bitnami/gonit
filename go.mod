@@ -1,6 +1,6 @@
 module github.com/bitnami/gonit
 
-go 1.18
+go 1.21
 
 require (
 	github.com/VividCortex/godaemon v1.0.0
