@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -160,15 +161,15 @@ func getChecksManager() interface {
 	}
 	return manager
 }
-func flattenErrors(errors []error) error {
-	if len(errors) == 0 {
+func flattenErrors(errList []error) error {
+	if len(errList) == 0 {
 		return nil
 	}
 	msgs := []string{}
-	for _, err := range errors {
+	for _, err := range errList {
 		msgs = append(msgs, err.Error())
 	}
-	return fmt.Errorf(strings.Join(msgs, "\n"))
+	return errors.New(strings.Join(msgs, "\n"))
 }
 
 type serviceCommand struct {
