@@ -213,7 +213,7 @@ func runCheckCommandAndExit(cmd string, args []string) {
 	if code != 0 {
 		msg = err.Error()
 	}
-	utils.Exit(code, msg)
+	utils.Exit(code, "%s", msg)
 }
 func runCheckCommand(cm interface {
 	monitor.ChecksManager
